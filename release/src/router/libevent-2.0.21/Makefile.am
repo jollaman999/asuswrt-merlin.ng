@@ -126,7 +126,7 @@ else
 noinst_LTLIBRARIES =  $(LIBEVENT_LIBS_LA)
 endif
 
-SUBDIRS = . include sample
+SUBDIRS = . include sample test
 
 if BUILD_WIN32
 
