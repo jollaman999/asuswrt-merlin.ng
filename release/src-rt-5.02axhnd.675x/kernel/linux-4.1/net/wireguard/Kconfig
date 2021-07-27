@@ -9,6 +9,7 @@ config WIREGUARD
 	select VFP
 	select VFPv3 if CPU_V7
 	select NEON if CPU_V7
+	select KERNEL_MODE_NEON if CPU_V7
 	default m
 	help
 	  WireGuard is a secure, fast, and easy to use replacement for IPsec
