@@ -30,7 +30,6 @@ build-aux/mdate-sh
 build-aux/missing
 build-aux/texinfo.tex
 build-aux/test-driver
-configure
 src/config.h.in
 src/css.c
 src/css_.c
