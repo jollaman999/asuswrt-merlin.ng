@@ -1642,8 +1642,8 @@ void blog_link( BlogNetEntity_t entity_type, Blog_t * blog_p,
             {
                 /*ct already exists decrement it's ref count */
                 nf_conntrack_put(&((struct nf_conn *)blog_p->ct_p[idx])->ct_general);
-                printk(KERN_WARNING "blog_link: overwriting ct_p=%px, new_ct=%px at idx=%d\n",
-                        blog_p->ct_p[idx], net_p, idx);
+                // printk(KERN_WARNING "blog_link: overwriting ct_p=%px, new_ct=%px at idx=%d\n",
+                //         blog_p->ct_p[idx], net_p, idx);
             }
 
             blog_p->ct_p[idx] = net_p; /* Pointer to conntrack */
