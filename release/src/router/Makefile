@@ -1465,9 +1465,11 @@ obj-$(RTCONFIG_DNSSEC) += $(if $(RTCONFIG_DNSSEC_OPENSSL),openssl,) $(if $(RTCON
 obj-$(RTCONFIG_SAMBA36X) += libiconv-1.14
 obj-$(RTCONFIG_TELENET) += lanauth
 obj-y += wsdd2
-ifeq ($(HND_ROUTER),y)
-obj-y += jitterentropy-rngd
-endif
+#ifeq ($(HND_ROUTER),y)
+#obj-y += jitterentropy-rngd
+#endif
+obj-y += haveged
+
 #obj-$(RTCONFIG_BWDPI) += faketc
 
 ifneq ($(HND_ROUTER),y)
@@ -7750,15 +7752,32 @@ libovpn: shared nvram$(BCMEX)$(EX7)
 
 jitterentropy-rngd:
 	@$(SEP)
-	$(MAKE) CFLAGS+="-fPIC -O0" -C $@
+	$(MAKE) CFLAGS+="-fPIC -O0 -I." -C $@
 
 jitterentropy-rngd-install:
 	install -D jitterentropy-rngd/jitterentropy-rngd $(INSTALLDIR)/jitterentropy-rngd/usr/sbin/jitterentropy-rngd
 	$(STRIP) $(INSTALLDIR)/jitterentropy-rngd/usr/sbin/jitterentropy-rngd
 
+haveged/Makefile:
+	cd haveged && autoreconf -fi && CFLAGS="-Wall -Os $(EXTRACFLAGS) -ffunction-sections -fdata-sections" \
+	LDFLAGS="-ffunction-sections -fdata-sections -Wl,--gc-sections" \
+	$(CONFIGURE) --prefix=/usr --enable-static --disable-shared --enable-daemon --disable-tune --disable-olt
+
+haveged: haveged/Makefile
+	@$(SEP)
+	$(MAKE) -C $@ $(PARALLEL_BUILD)
+
+haveged-install:
+	install -D haveged/src/haveged $(INSTALLDIR)/haveged/usr/sbin/haveged
+	$(STRIP) $(INSTALLDIR)/haveged/usr/sbin/haveged
+
+haveged-clean:
+	[ ! -f haveged/Makefile ] || $(MAKE) -C haveged clean
+	@rm -f haveged/Makefile
+
 wsdd2:
 	@$(SEP)
-	$(MAKE) CFLAGS+="-DASUSWRT -Os" -C $@
+	$(MAKE) CFLAGS+="-DASUSWRT -Os -std=gnu99" -C $@
 
 wsdd2-install:
 	install -D wsdd2/wsdd2 $(INSTALLDIR)/wsdd2/usr/sbin/wsdd2
