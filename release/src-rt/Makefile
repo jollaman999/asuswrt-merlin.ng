@@ -5375,7 +5375,7 @@ fi; \
 	fi; \
 	if [ "$(WIREGUARD)" = "y" ]; then \
 		sed -i "/CONFIG_WIREGUARD/d" $(1); \
-		echo "CONFIG_WIREGUARD=m" >>$(1); \
+		echo "CONFIG_WIREGUARD=y" >>$(1); \
 		sed -i "/CONFIG_WIREGUARD_DEBUG/d" $(1); \
 		echo "# CONFIG_WIREGUARD_DEBUG is not set" >>$(1); \
 		if [ "$(IPV6SUPP)" = "y" -o "$(IPV6FULL)" = "y" ]; then \
