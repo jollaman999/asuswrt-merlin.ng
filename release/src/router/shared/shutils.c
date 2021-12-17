@@ -2157,6 +2157,41 @@ char *trimNL(char *str)
 	return str;
 }
 
+/*******************************************************************
+* NAME: trimWS
+* AUTHOR: Renjie Lee
+* CREATE DATE: 2021/05/20
+* DESCRIPTION: remove leading and tailing white space(s)
+* INPUT:  str: the string to be procesed
+* OUTPUT:  None
+* RETURN: the string which has neither leading nor tailing white space(s)
+* NOTE:
+*******************************************************************/
+char *trimWS(char *str)
+{
+	char *end;
+
+	while(*str == ' ')
+	{
+		str++;
+	}
+
+	if(*str == 0)
+	{
+		return str;
+	}
+
+	end = str + strlen(str) - 1;
+	while((end > str) && (*end == ' '))
+	{
+		end--;
+	}
+
+	*(end+1) = '\0';
+
+	return str;
+}
+
 /**
 ** get_char_count()
 ** return the number of occurrence of character 'ch' in the C string 'str'.
@@ -2359,6 +2394,36 @@ int num_of_wl_if()
 	return count;
 }
 
+int num_of_5g_if()
+{
+	char word[256], *next;
+	int count = 0;
+	char wl_ifnames[32] = { 0 };
+	int band;
+
+	strlcpy(wl_ifnames, nvram_safe_get("wl_ifnames"), sizeof(wl_ifnames));
+	foreach (word, wl_ifnames, next) {
+		wl_ioctl(word, WLC_GET_BAND, &band, sizeof(band));
+		if(band == WLC_BAND_5G)
+			count++;
+	}
+
+	return count;
+}
+
+int num_of_wan_if()
+{
+	char word[256], *next;
+	int count = 0;
+	char wan_ifnames[32] = { 0 };
+
+	strlcpy(wan_ifnames, nvram_safe_get("wan_ifnames"), sizeof(wan_ifnames));
+	foreach (word, wan_ifnames, next)
+		count++;
+
+	return count;
+}
+
 /* hex2str()
  * Convert the hex array to string.
  * @param hex pointer to hex to be converted
@@ -2547,10 +2612,10 @@ void retrieve_static_maclist_from_nvram(int idx,struct maclist *maclist,int macl
 	snprintf(prefix,16,"wl%d_",idx);
 
 #ifdef RTCONFIG_AMAS
-	if (nvram_get("cfg_relist"))
+	if (is_cfg_relist_exist())
 	{
 		if (nvram_get_int("re_mode") == 1) {
-			nv = nvp = strdup(nvram_safe_get("cfg_relist"));
+			nv = nvp = get_cfg_relist(0);
 			if (nv) {
 				while ((b = strsep(&nvp, "<")) != NULL) {
 					if ((vstrsep(b, ">", &reMac, &maclist2g, &maclist5g, &timestamp) != 4))
@@ -2606,7 +2671,7 @@ void retrieve_static_maclist_from_nvram(int idx,struct maclist *maclist,int macl
 #ifdef RTCONFIG_AMAS
 		if (nvram_match(strcat_r(prefix, "macmode", tmp), "allow"))
 		{
-			nv = nvp = strdup(nvram_safe_get("cfg_relist"));
+			nv = nvp = get_cfg_relist(0);
 			if (nv) {
 				while ((b = strsep(&nvp, "<")) != NULL) {
 					if ((vstrsep(b, ">", &reMac, &maclist2g, &maclist5g, &timestamp) != 4))
