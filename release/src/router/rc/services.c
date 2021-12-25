@@ -1377,7 +1377,7 @@ void start_dnsmasq(void)
 
 			if(ip && *ip != '\0' && hostname && *hostname != '\0')
 			{
-				fprintf(fp, "%s %s.%s\n", ip, hostname, lan_domain);
+				fprintf(fp, "%s %s.%s %s\n", ip, hostname, lan_domain, hostname);
 			}	
 		}
 		free(nv);	
@@ -3981,7 +3981,7 @@ static char *get_ddns_macaddr(void)
 
 // TODO: handle wan0 only now
 int
-start_ddns(void)
+start_ddns(char *caller)
 {
 	FILE *fp;
 	char tmp[100], prefix[sizeof("wanXXXXXXXXXX_")];
@@ -4003,8 +4003,13 @@ start_ddns(void)
 	if (!is_routing_enabled())
 		return 0;
 
-	if (!nvram_get_int("ddns_enable_x"))
+	if (!nvram_get_int("ddns_enable_x")) {
+		/* Show the Return Code in UI */
+		if (nvram_match("ddns_return_code", "ddns_query")) {
+			nvram_set("ddns_return_code", nvram_safe_get("ddns_return_code_chk"));
+		}
 		return 0;
+	}
 
 	unit = wan_primary_ifunit();
 #if defined(RTCONFIG_DUALWAN)
@@ -4166,6 +4171,12 @@ start_ddns(void)
 	/* Show WAN unit used by ddns client to console and syslog. */
 	_dprintf("start_ddns update %s %s, wan_unit %d\n", server, service, unit);
 	logmessage("start_ddns", "update %s %s, wan_unit %d\n", server, service, unit);
+
+	/* MAX Retry Count mechanism */
+	if (caller == NULL) { // not from watchdog
+		//logmessage("start_ddns", "Reset DDNS Retry.\n");
+		nvram_set("ddns_check_retry", "10");
+	}
 
 	nvram_set("ddns_return_code", "ddns_query");
 
@@ -4358,6 +4369,7 @@ stop_ddns(void)
 	if (nvram_match("ddns_tunbkrnet", "1")) {
 		int evalRet = eval("iptables-restore", "/tmp/filter_rules");
 		rule_apply_checking("services", __LINE__, "/tmp/filter_rules", evalRet);
+		run_custom_script("firewall-start", 0, get_wan_ifname(wan_primary_ifunit()), NULL);
 		nvram_unset("ddns_tunbkrnet");
 	}
 #ifdef RTCONFIG_OPENVPN
@@ -6303,9 +6315,11 @@ void start_upnp(void)
 
 				/* Provide real IP when in dual NAT situation */
 #ifdef RTCONFIG_GETREALIP
-				if (nvram_get_int(strcat_r(prefix, "realip_state", tmp)) == 2) {
+				strcat_r(prefix, "realip_state", tmp);
+				if (nvram_get_int(tmp) != 2)
+					sleep(5);
+				if (nvram_get_int(tmp) == 2)
 					fprintf(f, "ext_ip=%s\n", nvram_safe_get(strcat_r(prefix, "realip_ip", tmp)));
-				}
 #endif
 
 				fappend(f, "/etc/upnp/config.custom");
@@ -14353,7 +14367,7 @@ check_ddr_done:
 #endif
 		start_firewall(wan_primary_ifunit(), 0);
 		start_webdav();
-		start_ddns();
+		start_ddns(NULL);
 		start_upnp();
 
 	}
@@ -14939,13 +14953,18 @@ check_ddr_done:
 		nvram_set("le_rc_notify", "1");
 		system("rm -f /var/cache/inadyn/*.cache");
 		if(action & RC_SERVICE_STOP) stop_ddns();
-		if(action & RC_SERVICE_START) start_ddns();
+		if(action & RC_SERVICE_START) start_ddns(NULL);
 	}
 #endif
 	else if (strcmp(script, "ddns") == 0)
 	{
 		if(action & RC_SERVICE_STOP) stop_ddns();
-		if(action & RC_SERVICE_START) start_ddns();
+		if(action & RC_SERVICE_START) {
+			if (cmd[1])
+				start_ddns(cmd[1]);
+			else
+				start_ddns(NULL);
+		}
 	}
 	else if (strcmp(script, "aidisk_asusddns_register") == 0)
 	{

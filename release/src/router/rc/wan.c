@@ -3489,7 +3489,7 @@ NOIP:
 			start_ovpn_eas();
 #endif
 			stop_ddns();
-			start_ddns();
+			start_ddns(NULL);
 		}
 #ifdef RTCONFIG_TR069
 		if(wan_unit == 0 ){
@@ -3518,9 +3518,6 @@ NOIP:
 		start_igmpproxy(wan_ifname);
 #endif
 
-	stop_upnp();
-	start_upnp();
-
 #ifdef RTCONFIG_IPSEC
 	if (nvram_get_int("ipsec_server_enable") || nvram_get_int("ipsec_client_enable")
 #ifdef RTCONFIG_INSTANT_GUARD
@@ -3535,7 +3532,7 @@ NOIP:
 	/* ntp is set, but it didn't just get set, so ntp_synced didn't already did these */
 	if (nvram_get_int("ntp_ready") && !first_ntp_sync) {
 		stop_ddns();
-		start_ddns();
+		start_ddns(NULL);
 	}
 
 #ifdef RTCONFIG_VPNC
@@ -3589,6 +3586,10 @@ NOIP:
 		eval("killall", "tcpdump");
 #endif
 	}
+
+/* Need to be done after getrealip */
+	stop_upnp();
+	start_upnp();
 
 #ifdef RTCONFIG_LANTIQ
 	disable_ppa_wan(wan_ifname);

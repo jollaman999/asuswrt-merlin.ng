@@ -743,7 +743,11 @@ static int update_alias_table(ddns_t *ctx)
 
 			/* Run command or script on successful update. */
 			if (script_exec)
-				os_shell_execute(script_exec, alias->address, alias->ipv6_address, alias->name, event, rc);
+				os_shell_execute(script_exec, alias->address,
+#ifdef USE_IPV6
+				alias->ipv6_address,
+#endif
+				alias->name, event, rc);
 		}
 
 		if (RC_DDNS_RSP_NOTOK == rc || RC_DDNS_RSP_AUTH_FAIL == rc || RC_DDNS_RSP_NOHOST == rc)
@@ -752,16 +756,12 @@ static int update_alias_table(ddns_t *ctx)
 		if (RC_DDNS_RSP_RETRY_LATER == rc && !remember)
 			remember = rc;
 #ifdef ASUSWRT
-		if(nvram_match("ddns_return_code", "ddns_query"))
+		if(nvram_match("ddns_return_code", "ddns_query") && rc != RC_OK)
 		{
 			switch (rc) {
 				/* Return these cases (define in check_error()) will retry again in Inadyn,
 				 * so set the error code and retry in watchdog */
 				/* defined in check_error() */
-				case RC_OK:
-					nvram_set("ddns_return_code", "200");
-					nvram_set("ddns_return_code_chk", "200");
-					break;
 				case RC_TCP_INVALID_REMOTE_ADDR: /* Probably temporary DNS error. */
 				case RC_TCP_CONNECT_FAILED:      /* Cannot connect to DDNS server atm. */
 				case RC_TCP_SEND_ERROR:
@@ -770,14 +770,12 @@ static int update_alias_table(ddns_t *ctx)
 				case RC_DDNS_RSP_RETRY_LATER:
 				case RC_DDNS_INVALID_CHECKIP_RSP:
 					logit(LOG_WARNING, "Will retry again ...");
-					nvram_set ("ddns_return_code", "Time-out");
-					nvram_set ("ddns_return_code_chk", "Time-out");
+					nvram_set ("ddns_return_code_chk", "Time-out"); /* not set ddns_return_code for Retry mechanism */
 					break;
 				case RC_HTTPS_FAILED_CONNECT:
 				case RC_HTTPS_FAILED_GETTING_CERT:
 					logit(LOG_WARNING, "Will retry again ...");
-					nvram_set ("ddns_return_code", "connect_fail");
-					nvram_set ("ddns_return_code_chk", "connect_fail");
+					nvram_set ("ddns_return_code_chk", "connect_fail"); /* not set ddns_return_code for Retry mechanism */
 					break;
 				case RC_DDNS_RSP_NOHOST:
 				case RC_DDNS_RSP_NOTOK:
