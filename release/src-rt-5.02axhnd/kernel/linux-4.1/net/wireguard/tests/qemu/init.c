@@ -11,7 +11,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <fcntl.h>
-#include <poll.h>
 #include <sys/wait.h>
 #include <sys/mount.h>
 #include <sys/types.h>
@@ -59,22 +58,29 @@ static void print_banner(void)
 
 static void seed_rng(void)
 {
-	struct pollfd fd = { .events = POLLOUT | POLLIN };
-	int bits = 4096;
-	if (mknod("/dev/random", S_IFCHR | 0644, makedev(1, 8)))
-		panic("mknod(/dev/random)");
-	fd.fd = open("/dev/random", O_WRONLY);
-	if (fd.fd < 0)
-		panic("open(random)");
+	int fd;
+	struct {
+		int entropy_count;
+		int buffer_size;
+		unsigned char buffer[256];
+	} entropy = {
+		.entropy_count = sizeof(entropy.buffer) * 8,
+		.buffer_size = sizeof(entropy.buffer),
+		.buffer = "Adding real entropy is not actually important for these tests. Don't try this at home, kids!"
+	};
+
+	if (mknod("/dev/urandom", S_IFCHR | 0644, makedev(1, 9)))
+		panic("mknod(/dev/urandom)");
+	fd = open("/dev/urandom", O_WRONLY);
+	if (fd < 0)
+		panic("open(urandom)");
 	for (;;) {
-		if (poll(&fd, 1, -1) < 0)
-			panic("poll(random)");
-		if (!(fd.revents & POLLOUT) || (fd.revents & POLLIN))
+		if (getrandom(entropy.buffer, sizeof(entropy.buffer), GRND_NONBLOCK) != -1 || errno != EAGAIN)
 			break;
-		if (ioctl(fd.fd, RNDADDTOENTCNT, &bits) < 0)
-			panic("ioctl(RNDADDTOENTCNT)");
+		if (ioctl(fd, RNDADDENTROPY, &entropy) < 0)
+			panic("ioctl(urandom)");
 	}
-	close(fd.fd);
+	close(fd);
 }
 
 static void mount_filesystems(void)
