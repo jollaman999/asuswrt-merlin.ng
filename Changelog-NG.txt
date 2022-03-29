@@ -1,8 +1,30 @@
 Asuswrt-Merlin 386/NG Changelog
 ===============================
 
-386.5 (xx-xxx-2022)
-  - NEW: Added support for the RT-AC68U V4.
+386.6 (xx-xxx-2022)
+  - NEW: Added Cloudflare and AdGuard to DNSFilter services.
+  - CHANGED: Reworked DNSFilter page design.
+  - CHANGED: Allow requesting bigger IPv6 subnets from
+             your ISP (Tvlz)
+
+
+386.5_2 (25-March-2022)
+  - UPDATED: openssl to 1.1.1n.
+  - UPDATED: openvpn to 2.5.6.
+  - CHANGED: Added Wireguard module + userspace tool to
+             GT-AXE11000.
+  - FIXED: Only a few DNSFilter clients are supported
+           on HND models (entries limited to 255 chars).
+  - FIXED: Security issue in AiCloud (backport from Asus)
+  - FIXED: Cannot enable Adaptive QoS under certain scenarios
+           on pre-HND router models.
+
+
+386.5 (2-March-2022)
+  - NEW: Added support for the RT-AC68U V4.  All
+         RT-AC68U models are using a combined
+         firmware file (like stock firmware),
+         with both firmwares within the same file.
   - NEW: Added support for the GT-AXE11000.
   - NEW: Added config option for the Boost key on
          GT models.  The option can be found on the
@@ -21,8 +43,7 @@ Asuswrt-Merlin 386/NG Changelog
   - FIXED: Various TQoS issues (Kevin Bracey)
   - FIXED: enabling/disabling 802.11b rates wouldn't get saved
            to nvram.
-  - FIXED: netatalk failing to load extensions, breaking
-           Time Machine.
+  - FIXED: netatalk failing to load extensions.
   - FIXED: Large swapfiles reported the incorrect size on
            the Tools page (Kevin Bracey)
   - FIXED: User accounts would not show as connected on
@@ -33,6 +54,11 @@ Asuswrt-Merlin 386/NG Changelog
   - FIXED: WAN monitoring could fail if using IPv6 and
            DNS Rebind protection was enabled.
   - FIXED: RT-AX86U syslog could be truncated after a reboot.
+  - FIXED: Toggling FTP WAN access without applying settings
+           wouldn't reconfigure the FTP server properly.
+  - FIXED: Non-functionning TrendMicro features on the
+           RT-AX68U and RT-AX86U (reverted kernel components
+           to the previous version).
 
 
 386.4 (1-Jan-2022)
