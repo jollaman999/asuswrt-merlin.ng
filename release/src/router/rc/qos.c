@@ -570,6 +570,7 @@ static int add_qos_rules(char *pcWANIF)
 		case MODEL_XD4PRO:
 		case MODEL_CTAX56_XD4:
 		case MODEL_RTAX58U:
+		case MODEL_RTAX82_XD6S:
 		case MODEL_RTAX58U_V2:
 		case MODEL_RTAX55:
 		case MODEL_RTAX56U:
@@ -1208,10 +1209,9 @@ static int start_tqos(void)
 		"# upload 1:60: LAN-to-LAN (vlan@%s)\n"
 		"\t$TCAUL parent 1:2 classid 1:60 htb rate 1000000kbit ceil 1000000kbit burst 10000 cburst 10000 prio 6\n"
 		"\t$TQAUL parent 1:60 handle 60: pfifo\n"
-		"\t$TFAUL parent 1: prio 6 protocol 802.1q u32 match mark 6 0x%x flowid 1:60\n",
+		"\t$TFAUL parent 1: prio 6 protocol 802.1q u32 match u32 0 0 flowid 1:60\n",
 			wan_ifname,
-			wan_ifname,
-			QOS_MASK
+			wan_ifname
 		);
 #endif
 
@@ -2112,7 +2112,7 @@ static int start_GeForce_QoS(void)
 	/* fixed ports */
 	fprintf(f, "$TFA parent 1: prio 10 protocol ip u32 match ip protocol 17 0xff match ip dport %d 0xffff flowid 1:10\n", nvfgn_GetQoSChannelPort("audio"));
 	fprintf(f, "$TFA parent 1: prio 10 protocol ip u32 match ip protocol 17 0xff match ip dport %d 0xffff flowid 1:10\n", nvfgn_GetQoSChannelPort("mic"));
-	fprintf(f, "$TFA parent 1: prio 10 protocol ip u32 match ip protocol 17 0xff match ip dport %d 0xffff flowid 1:10\n", nvfgn_GetQoSChannelPort("vedio"));
+	fprintf(f, "$TFA parent 1: prio 10 protocol ip u32 match ip protocol 17 0xff match ip dport %d 0xffff flowid 1:10\n", nvfgn_GetQoSChannelPort("video"));
 	fprintf(f, "$TFA parent 1: prio 10 protocol ip u32 match ip protocol 17 0xff match ip dport %d 0xffff flowid 1:10\n", nvfgn_GetQoSChannelPort("control"));
 	fprintf(f, "$TFA parent 1: prio 10 protocol ip u32 match ip protocol  6 0xff match ip dport %d 0xffff flowid 1:10\n", nvfgn_GetQoSChannelPort("control"));
 
@@ -2165,7 +2165,7 @@ static int start_GeForce_QoS(void)
 	/* fixed ports */
 	fprintf(f, "$TFAU parent 2: prio 10 protocol ip u32 match ip protocol 17 0xff match ip sport %d 0xffff flowid 2:10\n", nvfgn_GetQoSChannelPort("audio"));
 	fprintf(f, "$TFAU parent 2: prio 10 protocol ip u32 match ip protocol 17 0xff match ip sport %d 0xffff flowid 2:10\n", nvfgn_GetQoSChannelPort("mic"));
-	fprintf(f, "$TFAU parent 2: prio 10 protocol ip u32 match ip protocol 17 0xff match ip sport %d 0xffff flowid 2:10\n", nvfgn_GetQoSChannelPort("vedio"));
+	fprintf(f, "$TFAU parent 2: prio 10 protocol ip u32 match ip protocol 17 0xff match ip sport %d 0xffff flowid 2:10\n", nvfgn_GetQoSChannelPort("video"));
 	fprintf(f, "$TFAU parent 2: prio 10 protocol ip u32 match ip protocol 17 0xff match ip sport %d 0xffff flowid 2:10\n", nvfgn_GetQoSChannelPort("control"));
 	fprintf(f, "$TFAU parent 2: prio 10 protocol ip u32 match ip protocol  6 0xff match ip sport %d 0xffff flowid 2:10\n", nvfgn_GetQoSChannelPort("control"));
 
