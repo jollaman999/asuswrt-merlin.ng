@@ -186,6 +186,8 @@ static void loopback_setup(struct net_device *dev)
 	dev->header_ops		= &eth_header_ops;
 	dev->netdev_ops		= &loopback_ops;
 	dev->destructor		= loopback_dev_free;
+
+	netif_set_tso_max_size(dev, GSO_MAX_SIZE);
 }
 
 /* Setup and register the loopback device. */
