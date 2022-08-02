@@ -116,7 +116,11 @@ wl_extent_channel(int unit)
         snprintf(prefix, sizeof(prefix), "wl%d_", unit);
         name = nvram_safe_get(strcat_r(prefix, "ifname", tmp));
 
-	if ((unit == 1) || (unit == 2)) {
+#if defined(GTAXE16000)
+	if (unit != 3) {
+#else
+	if (unit != 0) {
+#endif
 		if ((ret = wl_ioctl(name, WLC_GET_BSSID, &bssid, ETHER_ADDR_LEN)) == 0) {
 			/* The adapter is associated. */
 			*(uint32*)buf = htod32(WLC_IOCTL_MAXLEN);
@@ -168,15 +172,14 @@ ej_wl_extent_channel(int eid, webs_t wp, int argc, char_t **argv)
 	char wl_ifnames[32] = { 0 };
 
 	strlcpy(wl_ifnames, nvram_safe_get("wl_ifnames"), sizeof(wl_ifnames));
-	foreach (word, wl_ifnames, next)
-                count_wl_if++;
+	ret = websWrite(wp, "[");
 
-        ret = websWrite(wp, "[\"%d\", \"%d\"", wl_extent_channel(0), wl_extent_channel(1));
-        if (count_wl_if >= 3)
-                ret += websWrite(wp, ", \"%d\"", wl_extent_channel(2));
-        ret += websWrite(wp, "]");
+	foreach (word, wl_ifnames, next) {
+		ret += websWrite(wp, "\"%d\",",  wl_extent_channel(count_wl_if++));
+	}
 
-        return ret;
+	ret += websWrite(wp, "\"0\"]");
+	return ret;
 }
 
 
@@ -355,14 +358,18 @@ ej_wl_unit_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 
         switch (unit) {
         case 0:
-		ret += websWrite(wp, "dataarray24 = [");
+		ret += websWrite(wp, "dataarray0 = [");
                 break;
         case 1:
-		ret += websWrite(wp, "dataarray5 = [");
+		ret += websWrite(wp, "dataarray1 = [");
 		break;
         case 2:
-		ret += websWrite(wp, "dataarray52 = [");
+		ret += websWrite(wp, "dataarray2 = [");
                 break;
+	case 3:
+		ret += websWrite(wp, "dataarray3 = [");
+		break;
+
         }
 
 	if (nvram_match(strcat_r(prefix, "mode", tmp), "wds"))
@@ -411,7 +418,15 @@ ej_wl_unit_status_array(int eid, webs_t wp, int argc, char_t **argv, int unit)
 
 // DFS status
 #ifdef RTCONFIG_BCMWL6
-	if (unit == 0)
+#if defined(GTAXE16000)
+	if (unit == 2 || unit == 3)
+#else
+	if ((unit == 0)
+#ifdef RTCONFIG_WIFI6E
+	|| (unit == 2)
+#endif
+	)
+#endif
 		goto sta_list;
 
 	if (nvram_match(strcat_r(prefix, "reg_mode", tmp), "off"))
@@ -453,13 +468,16 @@ sta_list:
 // Open client array
 	switch(unit) {
 	case 0:
-		ret += websWrite(wp, "wificlients24 = [");
+		ret += websWrite(wp, "wificlients0 = [");
 		break;
 	case 1:
-		ret += websWrite(wp, "wificlients5 = [");
+		ret += websWrite(wp, "wificlients1 = [");
 		break;
 	case 2:
-		ret += websWrite(wp, "wificlients52 = [");
+		ret += websWrite(wp, "wificlients2 = [");
+		break;
+	case 3:
+		ret += websWrite(wp, "wificlients3 = [");
 		break;
 	}
 
@@ -682,7 +700,7 @@ sta_list:
 					line = strtok(arplistptr, "\n");
 					while (line) {
 						if ( (sscanf(line,"%15s %*s %x %17s", ipentry, &flagentry, macentry) == 3) &&
-						     (!strcasecmp(macentry, ether_etoa((void *)&auth->ea[i], ea))) &&
+						     (!strcasecmp(macentry, ether_etoa((void *)&auth->ea[ii], ea))) &&
 						     (flagentry != 0) ) {
 						         found = 1;
 						         break;

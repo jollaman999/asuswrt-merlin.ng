@@ -153,6 +153,7 @@ function initial(){
 		document.getElementById("divSwitchMenu").style.display = "";
 	}
 
+	showopenvpnd_clientlist();
 	formShowAndHide(vpn_server_enable, "openvpn");
 
 	/*Advanced Setting start */
@@ -206,7 +207,7 @@ function initial(){
 	document.getElementById("faq_iPhone").href=faq_href_iPhone;
 	document.getElementById("faq_android").href=faq_href_android;
 
-	if(wan_proto=="v6plus" && array_ipv6_s46_ports.length > 1){
+	if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 		$(".setup_info_icon.basic").click(
 			function() {				
 				if($("#s46_ports_content").is(':visible'))
@@ -318,11 +319,9 @@ function formShowAndHide(server_enable, server_type) {
 		if(!email_support)
 			document.getElementById('exportViaEmail').style.display = "none";
 					
-		showopenvpnd_clientlist();
 		update_vpn_client_state();
 		openvpnd_connected_status();
 		check_vpn_server_state();
-		document.getElementById("divApply").style.display = "";
 	}
 	else{
 		document.getElementById("trVPNServerMode").style.display = "none";
@@ -331,9 +330,6 @@ function formShowAndHide(server_enable, server_type) {
 		$('*[data-group="cert_btn"]').hide();
 		document.getElementById("OpenVPN_setting").style.display = "none";
 		document.getElementById("divAdvanced").style.display = "none";
-		//if(vpn_server_mode != "openvpn") {
-		//	document.getElementById("divApply").style.display = "none";
-		//}
 	}
 }
 
@@ -367,7 +363,7 @@ function applyRule(){
 			return false;
 		}
 
-		if(wan_proto=="v6plus" && array_ipv6_s46_ports.length > 1){
+		if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			if (!validator.range_s46_ports(document.form.vpn_server_port, "none")){
 				if(!confirm("The following port related settings may not work properly since the port is not available in current v6plus usable port range. Do you want to continue?")){
 						document.form.vpn_server_port_adv.focus();
@@ -877,7 +873,7 @@ function update_vpn_server_state() {
 				document.getElementById('openvpn_error_message').innerHTML = "<span><#vpn_openvpn_fail3#></span>";
 				document.getElementById('openvpn_error_message').style.display = "";
 			}
-			else if(vpnd_state == '-1' && (vpnd_errno == '0' || vpnd_errno == '7')){
+			else if((vpnd_state == '-1' && vpnd_errno == '0') || (vpnd_state != '2' && vpnd_errno == '7')){
 				document.getElementById('openvpn_initial').style.display = "none";
 				document.getElementById('openvpn_error_message').innerHTML = "<span><#vpn_openvpn_fail4#></span>";
 				document.getElementById('openvpn_error_message').style.display = "";
@@ -941,7 +937,7 @@ function switchMode(mode){
 		$('*[data-group="cert_btn"]').hide();
 		document.getElementById("divAdvanced").style.display = "";
 
-		if(wan_proto=="v6plus" && array_ipv6_s46_ports.length > 1){
+		if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			if($("#s46_ports_content").is(':visible'))
 				$("#s46_ports_content").fadeOut();
 			
@@ -2007,7 +2003,7 @@ function handle_ipv6_submit_settings(){
 										<!-- Custom setting table end-->
 									</div>
 
-									<div id="divApply" class="apply_gen" style="display:none;">
+									<div id="divApply" class="apply_gen">
 										<input type="button" id="restoreButton" class="button_gen" value="<#Setting_factorydefault_value#>" onclick="defaultSettings();">
 										<input class="button_gen" onclick="applyRule()" type="button" value="<#CTL_apply#>"/>
 									</div>

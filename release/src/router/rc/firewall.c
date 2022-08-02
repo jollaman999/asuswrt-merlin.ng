@@ -1781,13 +1781,23 @@ void nat_setting(char *wan_if, char *wan_ip, char *wanx_if, char *wanx_ip, char 
 	/* ASUSWRT Parental Control */
 	pc_s *pc_list = NULL;
 	int pc_count;
+	int pc_count2;
 
 	get_all_pc_list(&pc_list);
 	pc_count = count_pc_rules(pc_list, 1);
+	pc_count2 = count_pc_rules(pc_list, 2);
 	free_pc_list(&pc_list);
 	pc_list = NULL;
 
-	if(nvram_get_int("MULTIFILTER_ALL") != 0 && pc_count > 0){
+	/* pc_block - 20220615
+		1. time-scheduling - BLOCK ALL DEVICES
+		2. time-scheduling - BLOCK
+		3. time-scheduling - TIME
+	*/
+	if (nvram_get_int("MULTIFILTER_BLOCK_ALL") == 1
+		|| (nvram_get_int("MULTIFILTER_ALL") != 0 && pc_count2 > 0)
+		|| (nvram_get_int("MULTIFILTER_ALL") != 0 && pc_count > 0)
+		) {
 		config_blocking_redirect(fp);
 	}
 #endif
@@ -1999,6 +2009,22 @@ void nat_setting(char *wan_if, char *wan_ip, char *wanx_if, char *wanx_ip, char 
 				}
 			}
 			free(nv);
+		}
+	}
+#endif
+
+#if defined(RTCONFIG_DNSFILTER) && defined(HND_ROUTER)
+	if (nvram_get_int("dnsfilter_enable_x") && ipv6_enabled()) {
+		FILE *fp_ipv6;
+
+		fp_ipv6 = fopen("/tmp/nat_rules_ipv6.dnsfilter", "w");
+		if (fp_ipv6 != NULL) {
+			fprintf(fp_ipv6, "*nat\n"
+			                 ":DNSFILTER - [0:0]\n");
+			dnsfilter6_settings_dnat(fp_ipv6);
+			fprintf(fp_ipv6, "COMMIT\n");
+			fclose(fp_ipv6);
+			eval("ip6tables-restore", "/tmp/nat_rules_ipv6.dnsfilter");
 		}
 	}
 #endif
@@ -2224,13 +2250,23 @@ void nat_setting2(char *lan_if, char *lan_ip, char *logaccept, char *logdrop)	//
 	/* ASUSWRT Parental Control */
 	pc_s *pc_list = NULL;
 	int pc_count;
+	int pc_count2;
 
 	get_all_pc_list(&pc_list);
 	pc_count = count_pc_rules(pc_list, 1);
+	pc_count2 = count_pc_rules(pc_list, 2);
 	free_pc_list(&pc_list);
 	pc_list = NULL;
 
-	if(nvram_get_int("MULTIFILTER_ALL") != 0 && pc_count > 0){
+	/* pc_block - 20220615
+		1. time-scheduling - BLOCK ALL DEVICES
+		2. time-scheduling - BLOCK
+		3. time-scheduling - TIME
+	*/
+	if (nvram_get_int("MULTIFILTER_BLOCK_ALL") == 1
+		|| (nvram_get_int("MULTIFILTER_ALL") != 0 && pc_count2 > 0)
+		|| (nvram_get_int("MULTIFILTER_ALL") != 0 && pc_count > 0)
+		) {
 		config_blocking_redirect(fp);
 	}
 #endif
@@ -2467,6 +2503,22 @@ void nat_setting2(char *lan_if, char *lan_ip, char *logaccept, char *logdrop)	//
 				}
 			}
 			free(nv);
+		}
+	}
+#endif
+
+#if defined(RTCONFIG_DNSFILTER) && defined(HND_ROUTER)
+	if (nvram_get_int("dnsfilter_enable_x") && ipv6_enabled()) {
+		FILE *fp_ipv6;
+
+		fp_ipv6 = fopen("/tmp/nat_rules_ipv6.dnsfilter", "w");
+		if (fp_ipv6 != NULL) {
+			fprintf(fp_ipv6, "*nat\n"
+			                 ":DNSFILTER - [0:0]\n");
+			dnsfilter6_settings_dnat(fp_ipv6);
+			fprintf(fp_ipv6, "COMMIT\n");
+			fclose(fp_ipv6);
+			eval("ip6tables-restore", "/tmp/nat_rules_ipv6.dnsfilter");
 		}
 	}
 #endif
@@ -3402,6 +3454,9 @@ filter_setting(int wan_unit, char *lan_if, char *lan_ip, char *logaccept, char *
 		    ":OVPNSF - [0:0]\n"
 		    ":OVPNCI - [0:0]\n"
 		    ":OVPNCF - [0:0]\n"
+#endif
+#ifdef RTCONFIG_DNSFILTER
+		    ":DNSFILTER_DOT - [0:0]\n"
 #endif
 		    ":ICMP_V6 - [0:0]\n"
 		    ":ICMP_V6_LOCAL - [0:0]\n"
@@ -4634,6 +4689,10 @@ TRACE_PT("write wl filter\n");
 
 #ifdef RTCONFIG_DNSFILTER
 	dnsfilter_dot_rules(fp);
+#ifdef RTCONFIG_IPv6
+	if (ipv6_enabled())
+		dnsfilter6_dot_rules(fp_ipv6);
+#endif
 #endif
 
 #ifdef RTCONFIG_WIREGUARD
@@ -4802,6 +4861,9 @@ filter_setting2(char *lan_if, char *lan_ip, char *logaccept, char *logdrop)
 		    ":OVPNSF - [0:0]\n"
 		    ":OVPNCI - [0:0]\n"
 		    ":OVPNCF - [0:0]\n"
+#endif
+#ifdef RTCONFIG_DNSFILTER
+		    ":DNSFILTER_DOT - [0:0]\n"
 #endif
 		    ":ICMP_V6 - [0:0]\n"
 		    ":ICMP_V6_LOCAL - [0:0]\n"
@@ -6060,6 +6122,10 @@ TRACE_PT("write wl filter\n");
 
 #ifdef RTCONFIG_DNSFILTER
 	dnsfilter_dot_rules(fp);
+#if defined(RTCONFIG_IPv6) && defined(HND_ROUTER)
+	if (ipv6_enabled())
+		dnsfilter6_dot_rules(fp_ipv6);
+#endif
 #endif
 
 #ifdef RTCONFIG_WIREGUARD
@@ -6234,6 +6300,7 @@ mangle_setting(char *wan_if, char *wan_ip, char *lan_if, char *lan_ip, char *log
 
 #ifdef RTCONFIG_DNSFILTER
 #ifdef RTCONFIG_IPV6
+#ifndef BCM4912 /* 5.04 has full dnat support */
 	if (nvram_get_int("dnsfilter_enable_x") && ipv6_enabled()) {
 		FILE *fp;
 
@@ -6244,7 +6311,7 @@ mangle_setting(char *wan_if, char *wan_ip, char *lan_if, char *lan_ip, char *log
 			    ":DNSFILTERF - [0:0]\n"
 			    ":DNSFILTER_DOT - [0:0]\n");
 
-			dnsfilter6_settings(fp);
+			dnsfilter6_settings_mangle(fp);
 
 			fprintf(fp, "COMMIT\n");
 			fclose(fp);
@@ -6252,6 +6319,7 @@ mangle_setting(char *wan_if, char *wan_ip, char *lan_if, char *lan_ip, char *log
 			eval("ip6tables-restore", "/tmp/mangle_rules_ipv6.dnsfilter");
 		}
 	}
+#endif /* BCM4912 */
 #endif /* RTCONFIG_IPV6 */
 #endif /* RTCONFIG_DNSFILTER */
 
@@ -6442,6 +6510,7 @@ mangle_setting2(char *lan_if, char *lan_ip, char *logaccept, char *logdrop)
 
 #ifdef RTCONFIG_DNSFILTER
 #ifdef RTCONFIG_IPV6
+#ifndef BCM4912 /* 5.04 has full dnat support */
 	if (nvram_get_int("dnsfilter_enable_x") && ipv6_enabled()) {
 		FILE *fp;
 
@@ -6452,7 +6521,7 @@ mangle_setting2(char *lan_if, char *lan_ip, char *logaccept, char *logdrop)
 				":DNSFILTERF - [0:0]\n"
 				":DNSFILTER_DOT - [0:0]\n");
 
-			dnsfilter6_settings(fp);
+			dnsfilter6_settings_mangle(fp);
 
 			fprintf(fp, "COMMIT\n");
 			fclose(fp);
@@ -6460,6 +6529,7 @@ mangle_setting2(char *lan_if, char *lan_ip, char *logaccept, char *logdrop)
 			eval("ip6tables-restore", "/tmp/mangle_rules_ipv6.dnsfilter");
 		}
 	}
+#endif /* BCM4912 */
 #endif /* RTCONFIG_IPV6 */
 #endif /* RTCONFIG_DNSFILTER */
 
@@ -6787,7 +6857,7 @@ int start_firewall(int wanunit, int lanunit)
 	DIR *dir;
 	struct dirent *file;
 	FILE *fp;
-	char name[NAME_MAX];
+	char name[NAME_MAX * 2];
 	//char logaccept[32], logdrop[32];
 	//oleg patch ~
 	char logaccept[32], logdrop[32];
@@ -6869,7 +6939,7 @@ int start_firewall(int wanunit, int lanunit)
 		while ((file = readdir(dir)) != NULL) {
 			if (strncmp(file->d_name, ".", NAME_MAX) != 0 &&
 			    strncmp(file->d_name, "..", NAME_MAX) != 0) {
-				sprintf(name, "/proc/sys/net/ipv4/conf/%s/rp_filter", file->d_name);
+				snprintf(name, sizeof(name), "/proc/sys/net/ipv4/conf/%s/rp_filter", file->d_name);
 				f_write_string(name, mcast_ifname &&
 					strncmp(file->d_name, mcast_ifname, NAME_MAX) == 0 ? "0" :
 					strncmp(file->d_name, "all", NAME_MAX) == 0 ? "-1" : "1", 0, 0);

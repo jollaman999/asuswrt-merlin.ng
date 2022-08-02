@@ -975,6 +975,7 @@ void ovpn_setup_client_fw(ovpn_cconf_t *cconf, int unit) {
 
 	fprintf(fp, "#!/bin/sh\n");
 	fprintf(fp, "iptables -I OVPNCF -i %s -j %s\n", cconf->if_name, (cconf->fw ? "DROP" : "ACCEPT"));
+	fprintf(fp, "iptables -I OVPNCI -i %s -j %s\n", cconf->if_name, (cconf->fw ? "DROP" : "ACCEPT"));
 
 #if !defined(HND_ROUTER)
 	// Setup traffic accounting
@@ -1126,7 +1127,7 @@ void ovpn_setup_server_watchdog(ovpn_sconf_t *sconf, int unit) {
 
 	if ((fp = fopen(buffer, "w"))) {
 		fprintf(fp, "#!/bin/sh\n"
-		            "if [ -z $(pidof vpnserver%d) ]\n"
+		            "if [ -z \"$(pidof vpnserver%d)\" ]\n"
 		            "then\n"
 		            "   service restart_vpnserver%d\n"
 		            "fi\n",

@@ -1243,13 +1243,23 @@ udhcpc_lan(int argc, char **argv)
 
 	if (!argv[1])
 		return EINVAL;
-	else if (strstr(argv[1], "deconfig"))
+	else if (strstr(argv[1], "deconfig")) {
+#if defined(RTCONFIG_AMAS)
+		if (nvram_get_int("re_mode") == 1)
+			logmessage("dhcp client", "deconfig");
+#endif
 		return deconfig_lan();
+	}
 	else if (strstr(argv[1], "bound"))
 		return bound_lan();
 	else if (strstr(argv[1], "renew"))
 		return renew_lan();
-/*	else if (strstr(argv[1], "leasefail")) */
+#if defined(RTCONFIG_AMAS)
+	else if (strstr(argv[1], "leasefail")) {
+		if (nvram_get_int("re_mode") == 1)
+			logmessage("dhcp client", "leasefail");
+	}
+#endif
 /*	else if (strstr(argv[1], "nak")) */
 
 	return EINVAL;
@@ -2096,7 +2106,7 @@ start_dhcp6c(void)
 			((unsigned long)(duid.ea[3] & 0x0f) << 16) |
 			((unsigned long)(duid.ea[4]) << 8) |
 			((unsigned long)(duid.ea[5])) : 1;
-		i = (nvram_get_int(ipv6_nvname("ipv6_prefix_len_wan")) ? : 64);
+		i = (nvram_get_int(ipv6_nvname("ipv6_prefix_len_wan")) ? : 0);
 		if ((i < 48) || (i > 64))
 			i = 0;
 		snprintf(prefix_arg, sizeof(prefix_arg), "%d:%lx", i, iaid);
