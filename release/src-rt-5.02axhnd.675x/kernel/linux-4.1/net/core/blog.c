@@ -1814,18 +1814,18 @@ void blog_link( BlogNetEntity_t entity_type, Blog_t * blog_p,
 
             if(blog_p->ct_p[idx]) 
             {
-                if(nf_ct_zone(blog_p->ct_p[idx]) == nf_ct_zone(net_p) &&
-                        (blog_p->rx_tunl_p == NULL || blog_p->tx_tunl_p == NULL))
-                {
-                    static DEFINE_RATELIMIT_STATE(_rs, 10*HZ, 3);
-                    if (__ratelimit(&_rs))
-                    {
-                        // printk(KERN_WARNING "blog_link:overwriting ct_p=%px, new_ct=%px idx=%d\n",
-                        //        blog_p->ct_p[idx], net_p, idx);
-                        blog_nfct_dump(blog_p->ct_p[idx], 0);
-                        blog_nfct_dump(net_p, 0);
-                    }
-                }
+                // if(nf_ct_zone(blog_p->ct_p[idx]) == nf_ct_zone(net_p) &&
+                //         (blog_p->rx_tunl_p == NULL || blog_p->tx_tunl_p == NULL))
+                // {
+                //     static DEFINE_RATELIMIT_STATE(_rs, 10*HZ, 3);
+                //     if (__ratelimit(&_rs))
+                //     {
+                //         printk(KERN_WARNING "blog_link:overwriting ct_p=%px, new_ct=%px idx=%d\n",
+                //                blog_p->ct_p[idx], net_p, idx);
+                //         blog_nfct_dump(blog_p->ct_p[idx], 0);
+                //         blog_nfct_dump(net_p, 0);
+                //     }
+                // }
 
                 /*ct already exists decrement it's ref count */
                 nf_conntrack_put(&((struct nf_conn *)blog_p->ct_p[idx])->ct_general);
