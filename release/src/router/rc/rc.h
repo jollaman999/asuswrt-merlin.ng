@@ -2466,10 +2466,14 @@ int set_cable_media(const char *eth_inf, const char *media_type);
 // dnsfilter.c
 #ifdef RTCONFIG_DNSFILTER
 extern void dnsfilter_settings(FILE *fp);
-extern void dnsfilter6_settings(FILE *fp);
+extern void dnsfilter6_settings_dnat(FILE *fp);
+extern void dnsfilter6_settings_mangle(FILE *fp);
 extern void dnsfilter_setup_dnsmasq(FILE *fp);
-#endif
 extern void dnsfilter_dot_rules(FILE *fp);
+#ifdef HND_ROUTER
+extern void dnsfilter6_dot_rules(FILE *fp);
+#endif
+#endif
 
 // ntpd.c
 #ifdef RTCONFIG_NTPD
