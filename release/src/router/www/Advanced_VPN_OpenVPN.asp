@@ -183,18 +183,9 @@ function initial(){
 	update_digest();
 	/*Advanced Setting end */
 
-	var vpn_server_array = { "PPTP" : ["PPTP", "Advanced_VPN_PPTP.asp"], "OpenVPN" : ["OpenVPN", "Advanced_VPN_OpenVPN.asp"], "IPSEC" : ["IPSec VPN", "Advanced_VPN_IPSec.asp"], "Wireguard" : ["Wireguard VPN", "Advanced_WireguardServer_Content.asp"]};
-	if(!pptpd_support) {
-		delete vpn_server_array.PPTP;
-	}
-	if(!openvpnd_support) {
-		delete vpn_server_array.OpenVPN;
-	}
-	if(!ipsec_srv_support) {
-		delete vpn_server_array.IPSEC;
-	}
-	if(!wireguard_support) {
-		delete vpn_server_array.Wireguard;
+	var vpn_server_array = { "OpenVPN" : ["OpenVPN", "Advanced_VPN_OpenVPN.asp"], "Others" : ["Others", "Advanced_VPNServer_Content.asp"]};
+	if(!pptpd_support && !ipsec_srv_support && !wireguard_support)  {
+		delete vpn_server_array.Others;
 	}
 
 	$('#divSwitchMenu').html(gen_switch_menu(vpn_server_array, "OpenVPN"));
@@ -207,7 +198,7 @@ function initial(){
 	document.getElementById("faq_iPhone").href=faq_href_iPhone;
 	document.getElementById("faq_android").href=faq_href_android;
 
-	if(wan_proto=="v6plus" && array_ipv6_s46_ports.length > 1){
+	if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 		$(".setup_info_icon.basic").click(
 			function() {				
 				if($("#s46_ports_content").is(':visible'))
@@ -363,7 +354,7 @@ function applyRule(){
 			return false;
 		}
 
-		if(wan_proto=="v6plus" && array_ipv6_s46_ports.length > 1){
+		if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			if (!validator.range_s46_ports(document.form.vpn_server_port, "none")){
 				if(!confirm("The following port related settings may not work properly since the port is not available in current v6plus usable port range. Do you want to continue?")){
 						document.form.vpn_server_port_adv.focus();
@@ -873,7 +864,7 @@ function update_vpn_server_state() {
 				document.getElementById('openvpn_error_message').innerHTML = "<span><#vpn_openvpn_fail3#></span>";
 				document.getElementById('openvpn_error_message').style.display = "";
 			}
-			else if(vpnd_state == '-1' && (vpnd_errno == '0' || vpnd_errno == '7')){
+			else if((vpnd_state == '-1' && vpnd_errno == '0') || (vpnd_state != '2' && vpnd_errno == '7')){
 				document.getElementById('openvpn_initial').style.display = "none";
 				document.getElementById('openvpn_error_message').innerHTML = "<span><#vpn_openvpn_fail4#></span>";
 				document.getElementById('openvpn_error_message').style.display = "";
@@ -937,7 +928,7 @@ function switchMode(mode){
 		$('*[data-group="cert_btn"]').hide();
 		document.getElementById("divAdvanced").style.display = "";
 
-		if(wan_proto=="v6plus" && array_ipv6_s46_ports.length > 1){
+		if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			if($("#s46_ports_content").is(':visible'))
 				$("#s46_ports_content").fadeOut();
 			

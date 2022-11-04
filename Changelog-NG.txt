@@ -1,5 +1,76 @@
-Asuswrt-Merlin 386/NG Changelog
-===============================
+Asuswrt-Merlin Changelog
+========================
+
+388.1 (xx-xxx-xxxx)
+  - NEW: Add RT-AX86U_PRO support.
+  - NEW: Merged with GPL 388_20566 (RT-AX88U and GT-AX11000)
+  - NEW: Merged with GPL 388_21224 (XT12, GT-AX6000,
+         GT-AX11000_Pro, GT-AXE16000, GT-AXE11000, RT-AX56U
+         and RT-AX58U)
+
+  - NEW: (388) WireGuard client and server.  The server uses the
+         new 388 VPN server webui.  Implemented a webui for
+         clients, based on the early development UI from Asus.
+
+         WG client routing is handled by VPN Director - you must
+         configuree redirection rules through it, same as on stock
+         firmware which requires configuring rules through
+         VPN Fusion.
+
+         DNS handling will be identical to OpenVPN's Exclusive DNS
+         mode, forcing clients to use the DNS provided by it
+         (if any is provided).
+
+         Note that enabling WireGuard will disable hardware
+         NAT acceleration due to compatiblity reasons.
+
+  - UPDATED: getdns/stubby to 1.7.2/0.4.2.
+  - UPDATED: zlib to 1.2.12 + backports.
+  - CHANGED: Setting an OpenVPN client to redirect all traffic while
+             in "Exclusive" DNS mode will now force redirect ALL
+             DNS traffic just like in VPN Director mode.
+             While this will allow redirecting clients with
+             hardcoded DNS servers, it also means that your whole
+             LAN will lose the ability of doing local name
+             resolution.  It might be best to use VPN Director
+             in that case to control which client should
+             be involved in the DNS redirection, or use
+             DNSFilter instead of Exclusive DNS mode.
+  - CHANGED: Reworked VPN Status page to only show currently
+             active services.
+  - FIXED: Wrong temperatures used by the temperature graphs
+           (386.8 regression)
+  - FIXED: CVE-2022-37434 in zlib.
+  - FIXED: GT-AXE16000 random reboots when using an OpenVPN
+           client with VPN Director and Adaptive QoS.
+  - REMOVED: Interface selector on Speedtest page (no longer
+             working, possibly due to an ookla client update)
+
+
+386.8 (13-Aug-2022)
+  - NOTE: This release is only available for the RT-AX88U as
+          well as the two new models listed below.
+  - NEW: Added support for the GT-AXE16000.
+  - NEW: Added support for the GT-AX11000_Pro.
+  - NEW: Added support for new RT-AX88U hardware revision.
+  - UPDATED: Merged with GPL 386_49634.
+  - CHANGED: Re-enabled IPv6 DDNS support.
+  - CHANGED: Once again block router DNS access over IPv6 when
+             using DNSFilter on a pre-HND model (reverted back
+             to 386.7 behaviour for that scenario)
+  - FIXED: inaccurate nvram usage on Sysinfo page for some HND
+           models.  Now accurately report kernel nvram usage.
+  - FIXED: WiFi Radar page alignment.
+  - FIXED: AiMesh node new firmware popup would use the device model
+           (like RT-AC66U_B1) rather than the product id (like
+           RT-AC68U) for the generated download URL.
+  - FIXED: OVPN client with DNS set to strict had lower priority
+           than DNSPrivacy servers.
+  - FIXED: IPv6 DNS may be missing if DNSPrivacy is enabled.
+  - FIXED: Wifi Radar pages missing on XT12.
+  - FIXED: QRcode failing to generate if the SSID contained unicode
+           characters (like emojis or other UTF8 entities)
+
 
 386.7_2 (24-July-2022)
   - UPDATED: openssl to 1.1.1q.

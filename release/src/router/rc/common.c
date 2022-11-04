@@ -693,9 +693,6 @@ void setup_conntrack(void)
 	snprintf(p, sizeof(p), "%s", nvram_safe_get("ct_tcp_timeout"));
 	if (strcmp(p,"0 0 0 0 0 0 0 0 0 0") && sscanf(p, "%u%u%u%u%u%u%u%u%u%u",
 		&v[0], &v[1], &v[2], &v[3], &v[4], &v[5], &v[6], &v[7], &v[8], &v[9]) == 10) {	// lightly verify
-#if defined(RTCONFIG_HND_ROUTER_AX_675X)
-		fprintf(stderr, "ct_tcp_timeout:[%s]\n", p);
-#endif
 		write_tcp_timeout("established", v[1]);
 		write_tcp_timeout("syn_sent", v[2]);
 		write_tcp_timeout("syn_recv", v[3]);
@@ -723,9 +720,6 @@ void setup_conntrack(void)
 
 	snprintf(p, sizeof(p), "%s", nvram_safe_get("ct_timeout"));
 	if (strcmp(p,"0 0") && sscanf(p, "%u%u", &v[0], &v[1]) == 2) {
-#if defined(RTCONFIG_HND_ROUTER_AX_675X)
-		fprintf(stderr, "ct_timeout:[%s]\n", p);
-#endif
 //		write_ct_timeout("generic", NULL, v[0]);
 		write_ct_timeout("icmp", NULL, v[1]);
 	}
@@ -838,6 +832,10 @@ void setup_conntrack(void)
 	f_write_string("/proc/sys/net/netfilter/nf_conntrack_helper", "1", 0, 0);
 #endif
 
+#ifdef RTCONFIG_BCMARM
+	/* mark only out of window RST segments as INVALID */
+	f_write_string("/proc/sys/net/netfilter/nf_conntrack_tcp_be_liberal", "1", 0, 0);
+#endif
 }
 
 void setup_pt_conntrack(void)
@@ -1816,6 +1814,42 @@ void collect_debuglog(int type)
 		strlcat(cmd, buf, sizeof(cmd));
 		system(cmd);
 		delete_tmplog();
+	}
+}
+
+void remove_guillemets_form_str(char *str_in,int sizeofbuf)//sizeofbuf not strlen
+{
+	char *tmp;
+	int i,tmp_idx;
+	int len;
+
+	if(str_in == NULL)
+		return;
+
+	_dprintf("from [%s]\n",str_in);
+
+	len = sizeofbuf;
+
+	tmp=malloc(len+1);
+	if(tmp == NULL)
+	{ //make sure conn_diag will not crash
+		for(i=0;i<len;i++){
+			if(str_in[i]=='<' || str_in[i]=='>')
+				memset(str_in,0,len);
+		}
+		return;
+	} else {
+		tmp_idx=0;
+		//remove '<' or '>'
+		memset(tmp,0,len+1);
+		for(i=0;i<len;i++){
+			if(str_in[i]!='<' && str_in[i]!='>'){
+				tmp[tmp_idx] = str_in[i];
+				tmp_idx++;
+			}
+		}
+		strncpy(str_in,tmp,len);
+		_dprintf("to [%s]\n",str_in);
 	}
 }
 

@@ -220,7 +220,7 @@ function upated_sim_record(){ //delete the oldest record and save the current da
 var debug_end_time = parseInt("<% nvram_get("dslx_diag_end_uptime"); %>");
 var wans_mode = '<%nvram_get("wans_mode");%>';
 var wans_lanport = '<% nvram_get("wans_lanport"); %>';
-var orig_wnaports_bond = '<% nvram_get("wanports_bond"); %>';
+var orig_wanports_bond = '<% nvram_get("wanports_bond"); %>';
 
 function overHint(itemNum){
 	var statusmenu = "";
@@ -229,10 +229,13 @@ function overHint(itemNum){
 	var title5_2 = 0;
 
 	if(itemNum == 101){
-		statusmenu ="<span><#WANAggregation_help_WAN#></span>";
+		if(based_modelid == "RT-AXE7800")
+			statusmenu ="<span><#WANAggregation_help_WAN#></span>".replace("#WAN", "1G WAN");
+		else
+			statusmenu ="<span><#WANAggregation_help_WAN#></span>".replace("#WAN", "WAN");
 	}
 	else if(itemNum == 102){
-		statusmenu ="<span><#WANAggregation_help_LAN#></span>".replace(/LAN-*\D* 4/, wanAggr_p2_name(orig_wnaports_bond));
+		statusmenu ="<span><#WANAggregation_help_LAN#></span>".replace(/LAN-*\D* 4/, wanAggr_p2_name(orig_wanports_bond));
 	}
 
 	if(itemNum == 50){
@@ -473,13 +476,21 @@ function overHint(itemNum){
 
 	// wifi hw switch
 	if(itemNum == 8){
+		if (based_modelid == "GT-AXE16000") {
+			band_unit = [ 3, 0, 1, 2];
+			radio_state = [ wlan2_radio_flag, wlan0_radio_flag, wlan1_radio_flag, "<% nvram_get("wl2_radio"); %>" ];
+		} else {
+			band_unit = [ 0, 1, 2, 2];
+			radio_state = [ wlan0_radio_flag, wlan1_radio_flag, wlan2_radio_flag, wlan2_radio_flag ];
+		}
+
 		statusmenu = "<div class='StatusHint'>WiFi :</div>";
 		wifiDesc = "<b>&nbsp;2.4G:</b> ";
-		if ( wlan0_radio_flag == 1) {
-			if ((extent_chan_arr[0] == 0) || (extent_chan_arr[0] == undefined) || (extent_chan_arr[0] == control_chan_arr[0]))
-				wifiDesc += "Channel " + control_chan_arr[0];
+		if ( radio_state[0] == 1) {
+			if ((extent_chan_arr[band_unit[0]] == 0) || (extent_chan_arr[band_unit[0]] == undefined) || (extent_chan_arr[band_unit[0]] == control_chan_arr[band_unit[0]]))
+				wifiDesc += "Channel " + control_chan_arr[band_unit[0]];
 			else
-				wifiDesc += "Channel "+ low_channel(control_chan_arr[0],extent_chan_arr[0]) + "+" + high_channel(control_chan_arr[0],extent_chan_arr[0]);
+				wifiDesc += "Channel "+ low_channel(control_chan_arr[band_unit[0]],extent_chan_arr[band_unit[0]]) + "+" + high_channel(control_chan_arr[band_unit[0]],extent_chan_arr[band_unit[0]]);
 		} else {
 			wifiDesc += "<#btn_Disabled#>";
 		}
@@ -489,22 +500,22 @@ function overHint(itemNum){
 				wifiDesc += "<br><b>5G-1:</b> ";
 			else
 				wifiDesc += "<br><b>&nbsp;&nbsp;&nbsp;5G:</b> ";
-			if (wlan1_radio_flag == 1) {
-				if ((extent_chan_arr[1] == 0) || (extent_chan_arr[1] == undefined) || (extent_chan_arr[1] == control_chan_arr[1]))
-					wifiDesc += "Channel " + control_chan_arr[1];
+			if (radio_state[1] == 1) {
+				if ((extent_chan_arr[band_unit[1]] == 0) || (extent_chan_arr[band_unit[1]] == undefined) || (extent_chan_arr[band_unit[1]] == control_chan_arr[band_unit[1]]))
+					wifiDesc += "Channel " + control_chan_arr[band_unit[1]];
 				else
-					wifiDesc += "Channel "+ control_chan_arr[1] + "/" + extent_chan_arr[1];
+					wifiDesc += "Channel "+ control_chan_arr[band_unit[1]] + "/" + extent_chan_arr[band_unit[1]];
 			} else {
 				wifiDesc += "<#btn_Disabled#>";
 			}
 
 			if (wl_info.band5g_2_support) {
 				wifiDesc += "<br><b>5G-2:</b> ";
-				if  ("<% nvram_get("wl2_radio"); %>" == 1) {
-					if ((extent_chan_arr[2] == 0) || (extent_chan_arr[2] == undefined) || (extent_chan_arr[2] == control_chan_arr[2]))
-						wifiDesc += "Channel " + control_chan_arr[2];
+				if  (radio_state[2] == 1) {
+					if ((extent_chan_arr[band_unit[2]] == 0) || (extent_chan_arr[band_unit[2]] == undefined) || (extent_chan_arr[band_unit[2]] == control_chan_arr[band_unit[2]]))
+						wifiDesc += "Channel " + control_chan_arr[band_unit[2]];
 					else
-						wifiDesc += "Channel "+ control_chan_arr[2] + "/" + extent_chan_arr[2];
+						wifiDesc += "Channel "+ control_chan_arr[band_unit[2]] + "/" + extent_chan_arr[band_unit[2]];
 	                        } else {
 					wifiDesc += "<#btn_Disabled#>";
 				}
@@ -514,11 +525,11 @@ function overHint(itemNum){
 
 		if (band6g_support) {
 			wifiDesc += "<br><b>&nbsp;&nbsp;&nbsp;6G:</b> ";
-			if  ("<% nvram_get("wl2_radio"); %>" == 1) {
-				if ((extent_chan_arr[2] == 0) || (extent_chan_arr[2] == undefined) || (extent_chan_arr[2] == control_chan_arr[2]))
-					wifiDesc += "Channel 6g" + control_chan_arr[2];
+			if  (radio_state[3] == 1) {
+				if ((extent_chan_arr[band_unit[3]] == 0) || (extent_chan_arr[band_unit[3]] == undefined) || (extent_chan_arr[band_unit[3]] == control_chan_arr[band_unit[3]]))
+					wifiDesc += "Channel 6g" + control_chan_arr[band_unit[3]];
 				else
-					wifiDesc += "Channel 6g"+ control_chan_arr[2] + "/" + extent_chan_arr[2];
+					wifiDesc += "Channel 6g"+ control_chan_arr[band_unit[3]] + "/" + extent_chan_arr[band_unit[3]];
 			} else {
 				wifiDesc += "<#btn_Disabled#>";
 			}
@@ -913,7 +924,10 @@ function cancel_dblog(){
 	parent.document.canceldblogForm.submit();
 }
 
+var referer_obj = "";
 function openHint(hint_array_id, hint_show_id, flag){
+	if(flag != undefined && flag != "")
+		referer_obj = flag;
 	statusmenu = "";
 	if(hint_array_id == 24){
 		var _caption = "";
@@ -1092,7 +1106,10 @@ function openHint(hint_array_id, hint_show_id, flag){
 		statusmenu = "<div>";
 		statusmenu += "<#WANAggregation_help_desc#>";
 		statusmenu += "<ol>";
-		statusmenu += "<li><#WANAggregation_help_step1#></li>".replace("LAN 4", wanAggr_p2_name(orig_wnaports_bond));
+		if(based_modelid == "RT-AXE7800")
+			statusmenu += "<li><#WANAggregation_help_step1#></li>".replace("LAN 4", wanAggr_p2_name(orig_wanports_bond)).replace("#WAN", "1G WAN");
+		else
+			statusmenu += "<li><#WANAggregation_help_step1#></li>".replace("LAN 4", wanAggr_p2_name(orig_wanports_bond)).replace("#WAN", "WAN");
 		statusmenu += "<li><#WANAggregation_help_step2#></li>";
 		statusmenu += "<li><#WANAggregation_help_step3#></li>";
 		statusmenu += "<li><#WANAggregation_help_step4#></li>";
@@ -2173,6 +2190,10 @@ function horizontalPlacement(browserWidth, horizontalScrollAmount, widthFix) {
 		}
 	}	
 
+	if(referer_obj == "rwd_vpns"){
+		if(o3_x > placeX)
+			placeX = o3_x;
+	}
 	return placeX;
 }
 
@@ -2841,7 +2862,10 @@ function chkPass(pwd, flag, obj, id) {
 		/* Display updated score criteria to client */
 		if(typeof document.forms[0] == "undefined" || (typeof document.forms[0] != "undefined" && document.form.current_page.value != "AiProtection_HomeProtection.asp")){		//for Router weakness status, Jimeing added at 2014/06/07
 			oScorebarBorder.style.display = "flex";
-			oScorebar.style.backgroundPosition = "-" + parseInt(nScore * 4) + "px";
+			if(flag == 'rwd_vpn_pwd')
+				oScorebar.style.backgroundPosition = parseInt(nScore) + "%";
+			else
+				oScorebar.style.backgroundPosition = "-" + parseInt(nScore * 4) + "px";
 		}
 		else{
 			if(nScore >= 0 && nScore < 40){
