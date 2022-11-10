@@ -371,17 +371,19 @@ static void _wg_client_nf_add(char* prefix, char* ifname)
 {
 	FILE* fp;
 	char path[128] = {0};
+	int fw;
 
 	snprintf(path, sizeof(path), "%s/fw_%s.sh", WG_DIR_CONF, ifname);
 	fp = fopen(path, "w");
 	if (fp)
 	{
+		fw = nvram_pf_get_int(prefix, "fw");
 		fprintf(fp, "#!/bin/sh\n\n");
 
-		fprintf(fp, "iptables -I WGCI -i %s -j ACCEPT\n", ifname);
-		fprintf(fp, "ip6tables -I WGCI -i %s -j ACCEPT\n", ifname);
-		fprintf(fp, "iptables -I WGCF -i %s -j ACCEPT\n", ifname);
-		fprintf(fp, "ip6tables -I WGCF -i %s -j ACCEPT\n", ifname);
+		fprintf(fp, "iptables -I WGCI -i %s -j %s\n", ifname, (fw ? "DROP" : "ACCEPT"));
+		fprintf(fp, "ip6tables -I WGCI -i %s -j %s\n", ifname, (fw ? "DROP" : "ACCEPT"));
+		fprintf(fp, "iptables -I WGCF -i %s -j %s\n", ifname, (fw ? "DROP" : "ACCEPT"));
+		fprintf(fp, "ip6tables -I WGCF -i %s -j %s\n", ifname, (fw ? "DROP" : "ACCEPT"));
 		fprintf(fp, "iptables -I WGCF -o %s -j ACCEPT\n", ifname);
 		fprintf(fp, "ip6tables -I WGCF -o %s -j ACCEPT\n", ifname);
 		fprintf(fp, "iptables -I WGCF -o %s -p tcp -m tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu\n", ifname);
@@ -1207,9 +1209,12 @@ void run_wgc_fw_scripts()
 	int unit;
 	char buf[128] = {0};
 
-	for(unit = 1; unit <= WG_CLIENT_MAX; unit++)
-	{
+	for (unit = WG_CLIENT_MAX; unit > 0; unit--) {
 		snprintf(buf, sizeof(buf), "%s/fw_%s%d.sh", WG_DIR_CONF, WG_CLIENT_IF_PREFIX, unit);
+		if(f_exists(buf))
+			eval(buf);
+
+		snprintf(buf, sizeof(buf), "%s/dns%d.sh", WG_DIR_CONF, unit);
 		if(f_exists(buf))
 			eval(buf);
 	}
