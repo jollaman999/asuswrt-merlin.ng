@@ -1759,18 +1759,6 @@ void nat_setting(char *wan_if, char *wan_ip, char *wanx_if, char *wanx_ip, char 
 #ifdef RTCONFIG_NTPD
 	if (nvram_get_int("ntpd_enable") && nvram_get_int("ntpd_server_redir")) {
 		fprintf(fp, "-A PREROUTING -i %s -p udp -m udp --dport 123 -j REDIRECT --to-port 123\n", lan_if);
-
-#if defined(RTCONFIG_AMAS_WGN)
-		char wgn_ifnames[6 * IFNAMSIZ];
-		char *next, iface[IFNAMSIZ];
-
-		strlcpy(wgn_ifnames, nvram_safe_get("wgn_ifnames"), sizeof(wgn_ifnames));
-		foreach(iface, wgn_ifnames, next) {
-			if (!iface_exist(iface))
-				continue;
-			fprintf(fp, "-A PREROUTING -i %s -p udp -m udp --dport 123 -j REDIRECT --to-port 123\n", iface);
-		}
-#endif
 	}
 #endif
 
@@ -2259,18 +2247,6 @@ void nat_setting2(char *lan_if, char *lan_ip, char *logaccept, char *logdrop)	//
 #ifdef RTCONFIG_NTPD
 	if (nvram_get_int("ntpd_enable") && nvram_get_int("ntpd_server_redir")) {
 		fprintf(fp, "-A PREROUTING -i %s -p udp -m udp --dport 123 -j REDIRECT --to-port 123\n", lan_if);
-#if defined(RTCONFIG_AMAS_WGN)
-		char wgn_ifnames[6 * IFNAMSIZ];
-		char *next, iface[IFNAMSIZ];
-
-		strlcpy(wgn_ifnames, nvram_safe_get("wgn_ifnames"), sizeof(wgn_ifnames));
-		foreach(iface, wgn_ifnames, next) {
-			if (!iface_exist(iface))
-				continue;
-			fprintf(fp, "-A PREROUTING -i %s -p udp -m udp --dport 123 -j REDIRECT --to-port 123\n", iface);
-		}
-#endif
-
 	}
 #endif
 
@@ -4649,10 +4625,6 @@ TRACE_PT("writing Parental Control\n");
 							//cprintf("[timematch] g=%s, p=%s, wanlan=%s, buf=%s\n", g, p, wanlan_timematch, wanlan_buf);
 							if (v4v6_ok & IPT_V4)
 				 				fprintf(fp, "-A FORWARD %s -i %s -o %s %s -j %s\n", g, wan_if, lan_if, setting, ftype);
-#ifdef RTCONFIG_IPV6
-							if (ipv6_enabled() && (v4v6_ok & IPT_V6) && *wan6face)
-								fprintf(fp_ipv6, "-A FORWARD %s -i %s -o %s %s -j %s\n", g, wan6face, lan_if, setting, ftype);
-#endif
 						}
 					}
 				}
@@ -4711,11 +4683,6 @@ TRACE_PT("write wl filter\n");
 		// Default
 		fprintf(fp, "-A FORWARD -i %s -o %s -j %s\n", wan_if, lan_if,
 			nvram_match("filter_wl_default_x", "DROP") ? logdrop : logaccept);
-#ifdef RTCONFIG_IPV6
-		if (ipv6_enabled() && *wan6face)
-		fprintf(fp_ipv6, "-A FORWARD -i %s -o %s -j %s\n", wan6face, lan_if,
-			nvram_match("filter_wl_default_x", "DROP") ? logdrop : logaccept);
-#endif
 	}
 #endif
 
@@ -6169,19 +6136,6 @@ TRACE_PT("writing Parental Control\n");
 							}
  			 			}
 					}
-
-#ifdef RTCONFIG_IPV6
-					/* separate lanwan timematch */
-					strlcpy(wanlan_buf, wanlan_timematch, sizeof(wanlan_buf));
-					p = wanlan_buf;
-					while(p){
-						if((g=strsep(&p, ">")) != NULL){
-							//cprintf("[timematch] g=%s, p=%s, wanlan=%s, buf=%s\n", g, p, wanlan_timematch, wanlan_buf);
-							if (ipv6_enabled() && (v4v6_ok & IPT_V6) && *wan6face)
-								fprintf(fp_ipv6, "-A FORWARD %s -i %s -o %s %s -j %s\n", wanlan_timematch, wan6face, lan_if, setting, ftype);
-						}
-					}
-#endif
  				}
 				if(nv) free(nv);
 			}
@@ -6269,11 +6223,6 @@ TRACE_PT("write wl filter\n");
 				wan_if = get_wan_ifname(unit);
 				fprintf(fp, "-A FORWARD -i %s -o %s -j %s\n", wan_if, lan_if, nvram_match("filter_wl_default_x", "DROP") ? logdrop : logaccept);
 			}
-
-#ifdef RTCONFIG_IPV6
-			if (ipv6_enabled() && *wan6face)
-				fprintf(fp_ipv6, "-A FORWARD -i %s -o %s -j %s\n", wan6face, lan_if, nvram_match("filter_wl_default_x", "DROP") ? logdrop : logaccept);
-#endif
 		}
 	}
 #endif
