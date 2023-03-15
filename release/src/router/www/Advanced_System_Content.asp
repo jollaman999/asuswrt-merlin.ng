@@ -190,10 +190,10 @@ var host_name = header_info[0].host;
 if(tmo_support)
 	var theUrl = "cellspot.router";	
 else
-	var theUrl = host_name;
+	var theUrl = htmlEnDeCode.htmlEncode(host_name);
 
 if(sw_mode == 3 || (sw_mode == 4))
-	theUrl = location.hostname;
+	theUrl = htmlEnDeCode.htmlEncode(location.hostname);
 
 var ddns_enable_x = '<% nvram_get("ddns_enable_x"); %>';
 var ddns_hostname_x_t = '<% nvram_get("ddns_hostname_x"); %>';
@@ -392,7 +392,7 @@ function initial(){
 	}
 	else{
 
-		if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			$(".setup_info_icon.https").show();
 			$(".setup_info_icon.https").click(
 				function() {
@@ -417,7 +417,7 @@ function initial(){
 		check_sshd_enable('<% nvram_get("sshd_enable"); %>');
 		document.form.sshd_authkeys.value = document.form.sshd_authkeys.value.replace(/>/gm,"\r\n");
 
-		if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 			$(".setup_info_icon.ssh").show();
 			$(".setup_info_icon.ssh").click(
 				function() {
@@ -542,7 +542,8 @@ function initial(){
 		show_boostkey_desc(<% nvram_get("turbo_mode"); %>);
 	}
 
-	if (based_modelid == "XT12" || based_modelid == "GT-AX6000" || based_modelid == "GT-AXE16000" || based_modelid == "GT-AX11000_PRO") {
+	if (based_modelid == "XT12" || based_modelid == "GT-AX6000" || based_modelid == "GT-AXE16000" || based_modelid == "GT-AX11000_PRO" || 
+	    based_modelid == "RT-AX86U_PRO" || based_modelid == "RT-AX88U_PRO") {
 		document.getElementById("jffs_format_tr").style.display = "none";
 /*		document.getElementById("ubifs_format_tr").style.display = ""; */
 	}
@@ -563,7 +564,7 @@ function applyRule(){
 		var isFromWAN = (function(){
 			var lanIpAddr = '<% nvram_get("lan_ipaddr"); %>';
 			if(location.hostname == lanIpAddr) return false;
-			else if(location.hostname == "router.asus.com") return false;
+			else if(location.hostname == "<#Web_DOMAIN_NAME#>") return false;
 			else if(location.hostname == "repeater.asus.com") return false;
 			else if(location.hostname == "cellspot.asus.com") return false;
 			else return true;
@@ -849,9 +850,9 @@ function validForm(){
 			return false;
 		}
 
-		if(wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1 && document.form.sshd_enable.value == 1){
+		if((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1 && document.form.sshd_enable.value == 1){
 			if (!validator.range_s46_ports(document.form.sshd_port, "none")){
-				if(!confirm("The following port related settings may not work properly since the port is not available in current v6plus usable port range. Do you want to continue?")){
+				if(!confirm(port_confirm)){
 					document.form.sshd_port.focus();
 					return false;
 				}
@@ -878,9 +879,9 @@ function validForm(){
 			if (!validator.range(document.form.misc_httpsport_x, 1024, 65535))
 				return false;
 
-			if (wan_proto=="v6plus" && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
+			if ((wan_proto == "v6plus" || wan_proto == "ocnvc") && s46_ports_check_flag && array_ipv6_s46_ports.length > 1){
 				if (!validator.range_s46_ports(document.form.misc_httpsport_x, "none")){
-					if(!confirm("The following port related settings may not work properly since the port is not available in current v6plus usable port range. Do you want to continue?")){
+					if(!confirm(port_confirm)){
 						document.form.misc_httpsport_x.focus();
 						return false;
 					}
@@ -1013,8 +1014,8 @@ var timezones = [
 	["MST7_2",	"(GMT-07:00) <#TZ07#>"],
 	["MST7DST_3",	"(GMT-07:00) <#TZ08#>"],
 	["CST6_2",	"(GMT-06:00) <#TZ10#>"],
-	["CST6DST_3",	"(GMT-06:00) <#TZ11#>"],
-	["CST6DST_3_1",	"(GMT-06:00) <#TZ12#>"],
+	["CST6_3",	"(GMT-06:00) <#TZ11#>"],	//CST6DST_3
+	["CST6_3_1",	"(GMT-06:00) <#TZ12#>"],	//CST6DST_3_1
 	["UTC6DST",	"(GMT-06:00) <#TZ13#>"],
 	["EST5DST",	"(GMT-05:00) <#TZ14#>"],
 	["UTC5_1",	"(GMT-05:00) <#TZ15#>"],
@@ -1101,7 +1102,7 @@ var timezones = [
 	["UTC-11_3",	"(GMT+11:00) <#TZ86#>"],
 	["UTC-11_4",	"(GMT+11:00) <#TZ82_1#>"],
 	["UTC-12",      "(GMT+12:00) <#TZ82#>"],
-	["UTC-12DST",      "(GMT+12:00) <#TZ82_2#>"],
+	["UTC-12_3",      "(GMT+12:00) <#TZ82_2#>"],	//UTC-12DST
 	["UTC-12_2",      "(GMT+12:00) <#TZ85#>"],
 	["NZST-12DST",	"(GMT+12:00) <#TZ83#>"],
 	["UTC-13",	"(GMT+13:00) <#TZ84#>"]];
@@ -1271,10 +1272,12 @@ function hide_https_lanport(_value){
 		$("#https_download_cert").css("display", "");
 		if(orig_http_enable == "0"){
 			$("#download_cert_btn").css("display", "none");
+			$("#clear_cert_btn").css("display", "none");
 			$("#download_cert_desc").css("display", "");
 		}
 		else{
 			$("#download_cert_btn").css("display", "");
+			$("#clear_cert_btn").css("display", "");
 			$("#download_cert_desc").css("display", "none");
 		}
 	}
@@ -1977,6 +1980,14 @@ function myisPortConflict(_val, service){
 
 function save_cert_key(){
 	location.href = "cert.tar";
+}
+
+function clear_cert_key(){
+	if(confirm("You will be automatically logged out for the renewal, are you sure you want to continue?")){
+		$.ajax({url: "clear_file.cgi?clear_file_name=cert.tgz"})
+		showLoading();
+		setTimeout(refreshpage, 1000);
+	}
 }
 
 var NTPListArray = [
@@ -2719,7 +2730,7 @@ function build_boostkey_options() {
 					</td>
 				</tr>
 				<tr>
-					<th>Redirect webui access to router.asus.com</th>
+					<th>Redirect webui access to www.asusrouter.com</th>
 					<td>
 						<input type="radio" name="http_dut_redir" value="1" <% nvram_match_x("","http_dut_redir","1", "checked"); %> ><#checkbox_Yes#>
 						<input type="radio" name="http_dut_redir" value="0" <% nvram_match_x("","http_dut_redir","0", "checked"); %> ><#checkbox_No#>
@@ -2970,6 +2981,7 @@ function build_boostkey_options() {
 					<th><#Local_access_certificate_download#></th>
 					<td>
 						<input id="download_cert_btn" class="button_gen" onclick="save_cert_key();" type="button" value="<#btn_Export#>" />
+						<input id="clear_cert_btn" class="button_gen" style="margin-left:10px" onclick="clear_cert_key();" type="button" value="<#CTL_renew#>" />
 						<span id="download_cert_desc"><#Local_access_certificate_desc#></span><a id="creat_cert_link" href="" style="font-family:Lucida Console;text-decoration:underline;color:#FFCC00; margin-left: 5px;" target="_blank">FAQ</a>
 					</td>
 				</tr>
