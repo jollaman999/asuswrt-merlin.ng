@@ -84,6 +84,8 @@ static void netsh_set_dns6_servers(const struct in6_addr *addr_list,
 
 static void netsh_command(const struct argv *a, int n, int msglevel);
 
+static void exec_command(const char *prefix, const struct argv *a, int n, int msglevel);
+
 static const char *netsh_get_id(const char *dev_node, struct gc_arena *gc);
 
 static bool
@@ -322,6 +324,22 @@ do_set_mtu_service(const struct tuntap *tt, const short family, const int mtu)
 out:
     gc_free(&gc);
     return ret;
+}
+
+static void
+do_dns_domain_wmic(bool add, const struct tuntap *tt)
+{
+    if (!tt->options.domain)
+    {
+        return;
+    }
+
+    struct argv argv = argv_new();
+    argv_printf(&argv, "%s%s nicconfig where (InterfaceIndex=%ld) call SetDNSDomain %s",
+                get_win_sys_path(), WMIC_PATH_SUFFIX, tt->adapter_index, add ? tt->options.domain : "");
+    exec_command("WMIC", &argv, 1, M_WARN);
+
+    argv_free(&argv);
 }
 
 #endif /* ifdef _WIN32 */
@@ -898,8 +916,8 @@ init_tun_post(struct tuntap *tt,
         return;
     }
 
-    overlapped_io_init(&tt->reads, frame, FALSE, true);
-    overlapped_io_init(&tt->writes, frame, TRUE, true);
+    overlapped_io_init(&tt->reads, frame, FALSE);
+    overlapped_io_init(&tt->writes, frame, TRUE);
     tt->adapter_index = TUN_ADAPTER_INDEX_INVALID;
 
     if (tt->windows_driver == WINDOWS_DRIVER_WINTUN)
@@ -1105,11 +1123,11 @@ do_ifconfig_ipv6(struct tuntap *tt, const char *ifname, int tun_mtu,
                          "generic BSD ifconfig inet6 failed");
 
 #if defined(TARGET_FREEBSD) && __FreeBSD_version >= 1200000 \
-    && __FreeBSD_version < 1204000
-    /* On FreeBSD 12.0-12.3, there is ipv6_activate_all_interfaces="YES"
+    && __FreeBSD_version < 1300000
+    /* On FreeBSD 12.0-12.4, there is ipv6_activate_all_interfaces="YES"
      * in rc.conf, which is not set by default.  If it is *not* set,
      * "all new interfaces that are not already up" are configured by
-     * devd + /etc/pccard_ether as "inet6 ifdisabled".
+     * devd -> /etc/pccard_ether -> /etc/network.subr as "inet6 ifdisabled".
      *
      * The "is this interface already up?" test is a non-zero time window
      * which we manage to hit with our ifconfig often enough to cause
@@ -1190,6 +1208,11 @@ do_ifconfig_ipv6(struct tuntap *tt, const char *ifname, int tun_mtu,
         /* set ipv6 dns servers if any are specified */
         netsh_set_dns6_servers(tt->options.dns6, tt->options.dns6_len, tt->adapter_index);
         windows_set_mtu(tt->adapter_index, AF_INET6, tun_mtu);
+
+        if (!tt->did_ifconfig_setup)
+        {
+            do_dns_domain_wmic(true, tt);
+        }
     }
 #else /* platforms we have no IPv6 code for */
     msg(M_FATAL, "Sorry, but I don't know how to do IPv6 'ifconfig' commands on this operating system.  You should ifconfig your TUN/TAP device manually or use an --up script.");
@@ -1535,11 +1558,18 @@ do_ifconfig_ipv4(struct tuntap *tt, const char *ifname, int tun_mtu,
         do_dns_service(true, AF_INET, tt);
         do_dns_domain_service(true, tt);
     }
-    else if (tt->options.ip_win32_type == IPW32_SET_NETSH)
+    else
     {
-        netsh_ifconfig(&tt->options, tt->adapter_index, tt->local,
-                       tt->adapter_netmask, NI_IP_NETMASK|NI_OPTIONS);
+        if (tt->options.ip_win32_type == IPW32_SET_NETSH)
+        {
+            netsh_ifconfig(&tt->options, tt->adapter_index, tt->local,
+                           tt->adapter_netmask, NI_IP_NETMASK | NI_OPTIONS);
+        }
+
+        do_dns_domain_wmic(true, tt);
     }
+
+
     if (tt->options.msg_channel)
     {
         do_set_mtu_service(tt, AF_INET, tun_mtu);
@@ -2242,7 +2272,7 @@ tuncfg(const char *dev, const char *dev_type, const char *dev_node,
         {
             msg(M_ERR, "Cannot get user entry for %s", username);
         }
-        else if (ioctl(tt->fd, TUNSETOWNER, platform_state_user.pw->pw_uid) < 0)
+        else if (ioctl(tt->fd, TUNSETOWNER, platform_state_user.uid) < 0)
         {
             msg(M_ERR, "Cannot ioctl TUNSETOWNER(%s) %s", username, dev);
         }
@@ -2255,7 +2285,7 @@ tuncfg(const char *dev, const char *dev_type, const char *dev_node,
         {
             msg(M_ERR, "Cannot get group entry for %s", groupname);
         }
-        else if (ioctl(tt->fd, TUNSETGROUP, platform_state_group.gr->gr_gid) < 0)
+        else if (ioctl(tt->fd, TUNSETGROUP, platform_state_group.gid) < 0)
         {
             msg(M_ERR, "Cannot ioctl TUNSETGROUP(%s) %s", groupname, dev);
         }
@@ -3705,6 +3735,7 @@ get_device_instance_id_interface(struct gc_arena *gc)
         msg(M_FATAL, "Error [%u] opening device information set key: %s", (unsigned int)err, strerror_win32(err, gc));
     }
 
+    msg(D_TAP_WIN_DEBUG, "Enumerate device interface lists:");
     for (DWORD i = 0;; ++i)
     {
         SP_DEVINFO_DATA device_info_data;
@@ -3790,6 +3821,10 @@ get_device_instance_id_interface(struct gc_arena *gc)
             dev_iif->net_cfg_instance_id = (unsigned char *)string_alloc((char *)net_cfg_instance_id, gc);
             dev_iif->device_interface = string_alloc(dev_if, gc);
 
+            msg(D_TAP_WIN_DEBUG, "NetCfgInstanceId: %s, Device Interface: %s",
+                dev_iif->net_cfg_instance_id,
+                dev_iif->device_interface);
+
             /* link into return list */
             if (!first)
             {
@@ -3835,6 +3870,7 @@ get_tap_reg(struct gc_arena *gc)
         msg(M_FATAL, "Error opening registry key: %s", ADAPTER_KEY);
     }
 
+    msg(D_TAP_WIN_DEBUG, "Enumerate drivers in registy: ");
     while (true)
     {
         char enum_name[256];
@@ -3942,6 +3978,9 @@ get_tap_reg(struct gc_arena *gc)
                             last->next = reg;
                         }
                         last = reg;
+
+                        msg(D_TAP_WIN_DEBUG, "NetCfgInstanceId: %s, Driver: %s",
+                            reg->guid, print_windows_driver(reg->windows_driver));
                     }
                 }
             }
@@ -5229,12 +5268,8 @@ dhcp_renew(const struct tuntap *tt)
     }
 }
 
-/*
- * netsh functions
- */
-
 static void
-netsh_command(const struct argv *a, int n, int msglevel)
+exec_command(const char *prefix, const struct argv *a, int n, int msglevel)
 {
     int i;
     for (i = 0; i < n; ++i)
@@ -5242,8 +5277,8 @@ netsh_command(const struct argv *a, int n, int msglevel)
         bool status;
         management_sleep(0);
         netcmd_semaphore_lock();
-        argv_msg_prefix(M_INFO, a, "NETSH");
-        status = openvpn_execve_check(a, NULL, 0, "ERROR: netsh command failed");
+        argv_msg_prefix(M_INFO, a, prefix);
+        status = openvpn_execve_check(a, NULL, 0, "ERROR: command failed");
         netcmd_semaphore_release();
         if (status)
         {
@@ -5251,7 +5286,13 @@ netsh_command(const struct argv *a, int n, int msglevel)
         }
         management_sleep(4);
     }
-    msg(msglevel, "NETSH: command failed");
+    msg(msglevel, "%s: command failed", prefix);
+}
+
+static void
+netsh_command(const struct argv *a, int n, int msglevel)
+{
+    exec_command("NETSH", a, n, msglevel);
 }
 
 void
@@ -6520,6 +6561,8 @@ tun_try_open_device(struct tuntap *tt, const char *device_guid, const struct dev
         path = tuntap_device_path;
     }
 
+    msg(D_TAP_WIN_DEBUG, "Using device interface: %s", path);
+
     tt->hand = CreateFile(path,
                           GENERIC_READ | GENERIC_WRITE,
                           0,         /* was: FILE_SHARE_READ */
@@ -6529,7 +6572,7 @@ tun_try_open_device(struct tuntap *tt, const char *device_guid, const struct dev
                           0);
     if (tt->hand == INVALID_HANDLE_VALUE)
     {
-        msg(D_TUNTAP_INFO, "CreateFile failed on %s device: %s", print_windows_driver(tt->windows_driver), path);
+        msg(D_TUNTAP_INFO | M_ERRNO, "CreateFile failed on %s device: %s", print_windows_driver(tt->windows_driver), path);
         return false;
     }
 
@@ -6916,6 +6959,11 @@ close_tun(struct tuntap *tt, openvpn_net_ctx_t *ctx)
         }
         else
         {
+            if (!tt->did_ifconfig_setup)
+            {
+                do_dns_domain_wmic(false, tt);
+            }
+
             netsh_delete_address_dns(tt, true, &gc);
         }
     }
@@ -6936,9 +6984,14 @@ close_tun(struct tuntap *tt, openvpn_net_ctx_t *ctx)
             do_dns_service(false, AF_INET, tt);
             do_address_service(false, AF_INET, tt);
         }
-        else if (tt->options.ip_win32_type == IPW32_SET_NETSH)
+        else
         {
-            netsh_delete_address_dns(tt, false, &gc);
+            do_dns_domain_wmic(false, tt);
+
+            if (tt->options.ip_win32_type == IPW32_SET_NETSH)
+            {
+                netsh_delete_address_dns(tt, false, &gc);
+            }
         }
     }
 

@@ -1,3 +1,190 @@
+Overview of changes in 2.6.3
+============================
+
+New features
+------------
+- Windows: support setting DNS domain in configurations without DHCP
+  (typically wintun or windco drivers), see GH OpenVPN/openvpn#306.
+
+Bug fixes
+---------
+- fix possible crash with Linux client on reconnect on TLS errors
+  (needs either "--status file" or active management interface to trigger)
+
+- fix incorrect formatting in .rst documents
+
+- Windows .msi installer: ensure interactive service stays enabled after
+  silent reinstall, see GH OpenVPN/openvpn-build#348, #349 and #351
+
+- Windows installer: repair querying install path info for easyrsa-start.bat
+  on some Windows language versions, see GH OpenVPN/openvpn-build#352.
+
+- Windows DCO driver: use correct crypto library so it loads on x86,
+  see GH OpenVPN/ovpn-dco-win#43
+  
+
+
+Overview of changes in 2.6.2
+============================
+
+New features
+------------
+- implement byte counter statistics for DCO Linux (p2mp server and client)
+
+- implement byte counter statistics for DCO Windows (client only)
+
+- '--dns server <n> address ...' now permits up to 8 v4 or v6 addresses
+
+- fix a few cases of possibly undefined behaviour detected by ASAN
+
+- add more unit tests for Windows cryptoapi interface
+
+
+Bug fixes
+---------
+- sending of AUTH_PENDING and INFO_PRE messages fixed (OpenVPN/openvpn#256)
+
+- Windows: do not treat "setting IPv6 interface metric failed" as fatal
+  error on "block-dns" install - this can happen if IPv6 is disabled on
+  the interface and is not harmful in itself (GH #294)
+
+- fix '--inactive' if DCO is in use
+  NOTE: on FreeBSD, this is not working yet (missing per-peer stats)
+
+- DCO-Linux: do not print errno on netlink errors (errno is not set by NL)
+
+- SOCKS client: improve error reporting on server disconnects
+
+- DCO-Linux: fix lockups due to netlink buffer overflows on high
+  client connect/disconnect activity.  See "User visible changes" for
+  more details of this.
+
+- fix some uses of the OpenSSL3 API for non-default providers
+  (enable use of quantum-crypto OpenSSL provider)
+
+- fix memory leak of approx. 1600 bytes per incoming initial TLS packet
+
+- fix bug when using ECDSA signatures with OpenSSL 3.0.x and pkcs11-helper
+  (data format conversion was not done properly)
+
+- fix 'make distcheck' - unexpected side effect of 'subdir-objects'
+
+- fix ASSERT() with dynamic tls-crypt and --tls-crypt-v2 (GH #272)
+
+
+User visible changes
+--------------------
+- print (kernel) DCO version on startup - helpful for getting a more
+  complete picture of the environment in use.
+
+- New control packets flow for data channel offloading on Linux.
+  2.6.2+ changes the way OpenVPN control packets are handled on
+  Linux when DCO is active, fixing the lockups observed with 2.6.0/2.6.1
+  under high client connect/disconnect activity.
+  This is an *INCOMPATIBLE* change and therefore an ovpn-dco kernel
+  module older than v0.2.20230323 (commit ID 726fdfe0fa21) will not
+  work anymore and must be upgraded.  The kernel module was renamed to
+  "ovpn-dco-v2.ko" in order to highlight this change and ensure that
+  users and userspace software could easily understand which version
+  is loaded.  Attempting to use the old ovpn-dco with 2.6.2+ will
+  lead to disabling DCO at runtime.
+
+- The ``client-pending-auth`` management command now requires also the
+  key id. The management version has been changed to 5 to indicate this change.
+
+- A client will now refuse a connection if pushed compression settings
+  will contradict the setting of ``allow-compression`` as this almost
+  always results in a non-working connection.
+
+
+Overview of changes in 2.6.1
+============================
+
+New features
+------------
+- Dynamic TLS Crypt
+  When both peers are OpenVPN 2.6.1+, OpenVPN will dynamically create
+  a tls-crypt key that is used for renegotiation. This ensure that only the
+  previously authenticated peer can do trigger renegotiation and complete
+  renegotiations.
+
+- CryptoAPI (Windows): support issuer name as a selector.
+  Certificate selection string can now specify a partial
+  issuer name string as "--cryptoapicert ISSUER:<string>" where
+  <string> is matched as a substring of the issuer (CA) name in
+  the certificate.
+
+
+User visible changes
+--------------------
+- on crypto initialization, move old "quite verbose" messages to --verb 4
+  and only print a more compact summary about crypto and timing parameters
+  by default
+
+- configure now enables DCO build by default on FreeBSD and Linux, which
+  brings in a default dependency for libnl-genl (for Linux distributions
+  that are too old to have this library, use "configure --disable-dco")
+
+- make "configure --help" output more consistent
+
+- CryptoAPI (Windows): remove support code for OpenSSL before 3.0.1
+  (this will not affect official OpenVPN for Windows installers, as they
+  will always be built with OpenSSL 3.0.x)
+
+- CryptoAPI (Windows): log the selected certificate's name
+
+- "configure" now uses "subdir-objects", for automake >= 1.16
+  (less warnings for recent-enough automake versions, will change
+  the way .o files are created)
+
+
+Bugfixes / minor improvements
+-----------------------------
+- fixed old IPv6 ifconfig race condition for FreeBSD 12.4 (trac #1226)
+
+- fix compile-time breakage related to DCO defines on FreeBSD 14
+
+- enforce minimum packet size for "--fragment" (avoid division by zero)
+
+- some alignment fixes to avoid unaligned memory accesses, which will
+  bring problems on some architectures (Sparc64, some ARM versions) -
+  found by USAN clang checker
+
+- windows source code fixes to reduce number of compile time warnings
+  (eventual goal is to be able to compile with -Werror on MinGW), mostly
+  related to signed/unsigned char * conversions, printf() format specifiers
+  and unused variables.
+
+- avoid endless loop on logging with --management + --verb 6+
+
+- build (but not run) unit tests on MinGW cross compiles, and run them
+  when building with GitHub Actions.
+
+- add unit test for parts of cryptoapi.c
+
+- add debug logging to help with diagnosing windows driver selection
+
+- disable DCO if proxy config is set via management interface
+
+- do not crash on Android if run without --management
+
+- improve documentation about cipher negotiation and OpenVPN3
+
+- for x86 windows builds, use proper calling conventions for dco-win
+  (__stdcall)
+
+- differentiate "dhcp-option ..." options into "needs an interface with
+  true DHCP service" (tap-windows) and "can also be installed by IPAPI
+  or service, and can be used on non-DHCP interfaces" (wintun, dco-win)
+
+- windows interactive service: fix possible double-free if "--block-dns"
+  installation fails due to "security products" interfering
+  (Github OpenVPN/openvpn#232)
+
+- "make dist": package ovpn_dco_freebsd.h to permit building from tarballs
+  on FreeBSD 14
+
+
 Overview of changes in 2.6.0, relative to 2.6_rc2
 =================================================
 
@@ -331,6 +518,11 @@ TLS 1.0 and 1.1 are deprecated
     a PRNG is better left to a crypto library. So we use the PRNG
     mbed TLS or OpenSSL now.
 
+``--keysize`` has been removed
+    The ``--keysize`` option was only useful to change the key length when using the
+    BF, CAST6 or RC2 ciphers. For all other ciphers the key size is fixed with the
+    chosen cipher. As OpenVPN v2.6 no longer supports any of these variable length
+    ciphers, this option was removed as well to avoid confusion.
 
 Compression no longer enabled by default
     Unless an explicit compression option is specified in the configuration,
