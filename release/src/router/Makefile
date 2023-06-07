@@ -894,7 +894,7 @@ IPTC_LIBDIR := $(TOP)/$(IPTABLES)/libiptc/.libs
 IPTC_LIBS := -lip4tc $(if $(RTCONFIG_IPV6),-lip6tc,) -liptc
 obj-y += iptables-1.4.x
 ifeq ($(HND_ROUTER),y)
-obj-y += iproute2-4.3
+obj-y += iproute2-5.11.0
 else ifeq ($(or $(RTAX53U),$(RTAX54),$(RT4GAX56),$(RTCONFIG_MT798X),$(if $(filter $(BUILD_NAME),XD4S),y,)),y)
 obj-y += iproute2-5.18.0
 else
@@ -8218,6 +8218,19 @@ wsdd2-install:
 
 wsdd2-clean:
 	$(MAKE) -C wsdd2 clean
+
+iproute2-5.11.0:
+	touch iproute2-5.11.0/iproute2-5.11.0/configure
+	$(MAKE) -C iproute2-5.11.0
+
+iproute2-5.11.0-install:
+	install -D iproute2-5.11.0/iproute2-5.11.0/tc/tc $(INSTALLDIR)/iproute2-5.11.0/usr/sbin/tc
+	install -D iproute2-5.11.0/iproute2-5.11.0/ip/ip $(INSTALLDIR)/iproute2-5.11.0/usr/sbin/ip
+	-$(STRIP) $(INSTALLDIR)/iproute2-5.11.0/usr/sbin/*
+
+iproute2-5.11.0-clean:
+	-@$(MAKE) -C iproute2-5.11.0 clean
+	-rm -f iproute2-5.11.0/iproute2-5.11.0/Config
 
 # End merlin components
 
