@@ -62,6 +62,10 @@ static void _wg_tunnel_create(char* prefix, char* ifname, char* conf_path)
 		eval("ip", "address", "add", buf, "dev", ifname);
 
 	eval("wg", "setconf", ifname, conf_path);
+
+	if (nvram_pf_get_int(prefix, "mtu"))
+		eval("ip", "link", "set", ifname, "mtu", nvram_pf_safe_get(prefix, "mtu"));
+
 	eval("ip", "link", "set", "up", "dev", ifname);
 }
 
