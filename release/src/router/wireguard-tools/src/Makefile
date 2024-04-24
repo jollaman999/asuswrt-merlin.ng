@@ -41,7 +41,6 @@ CFLAGS ?= -O3
 ifneq ($(wildcard uapi/$(PLATFORM)/.),)
 CFLAGS += -idirafter uapi/$(PLATFORM)
 endif
-CFLAGS += -Iuapi/linux
 CFLAGS += -std=gnu99 -D_GNU_SOURCE
 CFLAGS += -Wall -Wextra
 CFLAGS += -MMD -MP
