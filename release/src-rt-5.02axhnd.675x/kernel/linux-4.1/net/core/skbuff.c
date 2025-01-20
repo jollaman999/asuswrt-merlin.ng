@@ -4276,8 +4276,12 @@ int skb_gro_receive(struct sk_buff **head, struct sk_buff *skb)
 	unsigned int len = skb_gro_len(skb);
 	struct sk_buff *lp, *p = *head;
 	unsigned int delta_truesize;
+	unsigned int gro_max_size;
 
-	if (unlikely(p->len + len >= 65536))
+	/* pairs with WRITE_ONCE() in netif_set_gro_max_size() */
+	gro_max_size = READ_ONCE(p->dev->gro_max_size);
+
+	if (unlikely(p->len + len >= gro_max_size ))
 		return -E2BIG;
 
 	lp = NAPI_GRO_CB(p)->last;

@@ -1638,6 +1638,9 @@ enum netdev_priv_flags {
  *
  *	@qdisc_tx_busylock:	XXX: need comments on this one
  *
+ *	@gro_max_size:	Maximum size of aggregated packet in generic
+ *			receive offload (GRO)
+ *
  *	FIXME: cleanup struct net_device such that network protocol info
  *	moves out.
  */
@@ -1819,6 +1822,8 @@ struct net_device {
 #endif
 
 	unsigned long		gro_flush_timeout;
+#define GRO_MAX_SIZE		65536
+	unsigned int		gro_max_size;
 	rx_handler_func_t __rcu	*rx_handler;
 	void __rcu		*rx_handler_data;
 
@@ -3987,6 +3992,13 @@ static inline void netif_set_gso_max_segs(struct net_device *dev,
 {
 	/* dev->gso_max_segs is read locklessly from sk_setup_caps() */
 	WRITE_ONCE(dev->gso_max_segs, segs);
+}
+
+static inline void netif_set_gro_max_size(struct net_device *dev,
+					  unsigned int size)
+{
+	/* This pairs with the READ_ONCE() in skb_gro_receive() */
+	WRITE_ONCE(dev->gro_max_size, size);
 }
 
 static inline void skb_gso_error_unwind(struct sk_buff *skb, __be16 protocol,
