@@ -1735,7 +1735,7 @@ static int do_setlink(const struct sk_buff *skb,
 			goto errout;
 		}
 		if (dev->gso_max_segs ^ max_segs) {
-			dev->gso_max_segs = max_segs;
+			netif_set_gso_max_segs(dev, max_segs);
 			status |= DO_SETLINK_MODIFIED;
 		}
 	}

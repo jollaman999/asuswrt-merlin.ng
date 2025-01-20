@@ -2299,7 +2299,7 @@ static int efx_register_netdev(struct efx_nic *efx)
 		net_dev->netdev_ops = &efx_farch_netdev_ops;
 	}
 	net_dev->ethtool_ops = &efx_ethtool_ops;
-	net_dev->gso_max_segs = EFX_TSO_MAX_SEGS;
+	netif_set_gso_max_segs(net_dev, EF4_TSO_MAX_SEGS);
 
 	rtnl_lock();
 
