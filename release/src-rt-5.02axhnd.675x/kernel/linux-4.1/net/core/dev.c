@@ -3022,7 +3022,7 @@ netdev_features_t netif_skb_features(struct sk_buff *skb)
 	netdev_features_t features = dev->features;
 	u16 gso_segs = skb_shinfo(skb)->gso_segs;
 
-	if (gso_segs > dev->gso_max_segs || gso_segs < dev->gso_min_segs)
+	if (gso_segs > READ_ONCE(dev->gso_max_segs) || gso_segs < dev->gso_min_segs)
 		features &= ~NETIF_F_GSO_MASK;
 
 	/* If encapsulation offload request, verify we are testing
